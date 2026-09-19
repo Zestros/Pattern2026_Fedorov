@@ -3,8 +3,52 @@ import time, math
 
 cal_ID = 0
 
+LANGUAGES = {
+    'ru': {
+        'weekdays': ('Сб', 'Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт'),
+        'months': (
+            'Январь', 'Февраль', 'Март', 'Апрель',
+            'Май', 'Июнь', 'Июль', 'Август',
+            'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+        ),
+        'error': (
+            'Год должен быть от 1 до 3999!',
+            'Месяц должен быть от 1 до 12!'
+        ),
+        'offset': 2
+    },
+
+    'en': {
+        'weekdays': ('Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'),
+        'months': (
+            'January', 'February', 'March', 'April',
+            'May', 'June', 'July', 'August',
+            'September', 'October', 'November', 'December'
+        ),
+        'error': (
+            'Year must be 1 - 3999!',
+            'Month must be 1 - 12!'
+        ),
+        'offset': 1
+    },
+
+    'de': {
+        'weekdays': ('Sa', 'So', 'Mo', 'Di', 'Mi', 'Do', 'Fr'),
+        'months': (
+            'Januar', 'Februar', 'März', 'April',
+            'Mai', 'Juni', 'Juli', 'August',
+            'September', 'Oktober', 'November', 'Dezember'
+        ),
+        'error': (
+            'Das Jahr muss zwischen 1 und 3999 liegen!',
+            'Der Monat muss zwischen 1 und 12 liegen!'
+        ),
+        'offset': 2
+    }
+}
+
 class MonthlyCalendar:
-    def __init__(self, year = None, month = None):
+    def __init__(self, year = None, month = None, language = 'ru'):
         self.tFontFace = 'Arial, Helvetica'
         self.tFontSize = 12                
         self.tFontColor = '#FFFFFF'         
@@ -36,16 +80,18 @@ class MonthlyCalendar:
         self.borderColor = '#304B90'        
         self.hilightColor = '#FFFF00'       
 
-        self.link = ''                      
-        self.offset = 1                    
+        self.link = ''                                        
         self.weekNumbers = 0                
 
+        self.set_language(language)
+        """
         self.weekdays = ('Sob', 'Nd', 'Pn', 'Wt', 'Sr', 'Czw', 'Pt')
 
         self.months = ('Styczen', 'Luty', 'Marzec', 'Kwiecien', 'Maj', 'Czerwiec',
                        'Lipiec', 'Sierpien', 'Wrzesien', 'Pazdziernik', 'Listopad', 'Grudzien')
 
         self.error = ('Year must be 1 - 3999!', 'Month must be 1 - 12!')
+        """
 
         if year is None and month is None:
             year = time.localtime().tm_year
@@ -58,6 +104,16 @@ class MonthlyCalendar:
 
     __size = 0
     __mDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+
+    def set_language(self, language):
+            if language not in LANGUAGES:
+                language = 'ru'
+            
+            self.language = language
+            self.offset = LANGUAGES[language]['offset']
+            self.weekdays = LANGUAGES[language]['weekdays']
+            self.months = LANGUAGES[language]['months']
+            self.error = LANGUAGES[language]['error']
 
     def set_styles(self):
         globals()['cal_ID'] += 1
@@ -239,4 +295,14 @@ class MonthlyCalendar:
             html += '</table></td></tr></table>'
         return html
 
+    
+if __name__ == "__main__":
+    calendar = MonthlyCalendar()
+
+    html = "<!DOCTYPE html><html><head> <meta charset='UTF-8'> </head><body>"
+    html += calendar.create()
+    html += "</body></html>"
+
+    with open("index.html", "w", encoding="utf-8") as file:
+        file.write(html)
     

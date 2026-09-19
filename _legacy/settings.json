@@ -1,0 +1,25 @@
+{
+    "application": {
+        "name": "Приложение учета ресторанов",
+        "version": "1.0.0",
+        "language": "ru"
+    },
+    "database": {
+        "type": "sqlite",
+        "path": "romashka.db"
+    },
+    "organization": {
+        "name": "Ромашка"
+    },
+    "restaurants": [
+        {
+            "id": 1,
+            "name": "Ромашка — Центр",
+            "address": "ул. Иркутская, 1",
+            "delivery": true,
+            "dine_in": true,
+            "opens_at": "10:00",
+            "closes_at": "22:00"
+        }
+    ]
+}
