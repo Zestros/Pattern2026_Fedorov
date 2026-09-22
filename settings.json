@@ -1,4 +1,12 @@
 {
+    "test": {
+    "python.testing.pytestArgs": [
+        "Tst"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
+    },
+
     "application": {
         "name": "Приложение учета ресторанов",
         "version": "1.0.0",
