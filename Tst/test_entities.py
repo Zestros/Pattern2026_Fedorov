@@ -55,6 +55,23 @@ def test_equal_entities_abstract_model_eq_when_codes_match():
     # Проверка
     assert entity_1 == entity_2
 
+def test_arguments_exception_with_details_entity_unique_code_when_code_is_not_string():
+    """
+    <summary>Не строковый код вызывает arguments_exception с полем name и причиной ошибки.</summary>
+    """
+
+    # Подготовка
+    entity = test_entity()
+    code = None
+
+    # Действие
+    with pytest.raises(arguments_exception) as exception:
+        entity.unique_code = code
+
+    # Проверка
+    assert "Поле: unique_code" in str(exception.value)
+    assert "Уникальный код должен быть строкой" in str(exception.value)
+
 def test_not_value_error_entity_model_name_when_empty_value_set():
     """
     <summary>Пустое имя вызывает arguments_exception, не являющееся ValueError.</summary>

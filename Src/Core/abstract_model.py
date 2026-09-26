@@ -22,10 +22,22 @@ class abstract_model(ABC):
     
     @unique_code.setter
     def unique_code(self, value: str):
-        if value.strip() == "":
-            raise arguments_exception("value", "Некорректно передан параметр!")
+        """Устанавливает непустой строковый уникальный код."""
+        if not isinstance(value, str):
+            raise arguments_exception(
+                "unique_code",
+                "Уникальный код должен быть строкой",
+            )
 
-        self.__unique_code = value.strip()
+        code = value.strip()
+
+        if code == "":
+            raise arguments_exception(
+                "unique_code",
+                "Уникальный код не может быть пустым",
+            )
+
+        self.__unique_code = code
 
     def __eq__(self, other):
         return self.__unique_code == other.__unique_code
