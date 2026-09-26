@@ -57,7 +57,7 @@ def test_equal_entities_abstract_model_eq_when_codes_match():
 
 def test_arguments_exception_with_details_entity_unique_code_when_code_is_not_string():
     """
-    <summary>Не строковый код вызывает arguments_exception с полем name и причиной ошибки.</summary>
+    <summary>Не строковый код вызывает arguments_exception с полем unique_code и причиной ошибки.</summary>
     """
 
     # Подготовка

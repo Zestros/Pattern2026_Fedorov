@@ -10,6 +10,7 @@ class abstract_model(ABC):
     __unique_code:str
 
     def __init__(self) -> None:
+        """Создает абстрактный класс для наследования моделей"""
         super().__init__()
         self.__unique_code = uuid.uuid4().hex
 
@@ -40,4 +41,5 @@ class abstract_model(ABC):
         self.__unique_code = code
 
     def __eq__(self, other):
+        """Сравнение моделей идет по id"""
         return self.__unique_code == other.__unique_code
