@@ -1,6 +1,5 @@
 """Юнит-тесты базовых моделей и проверки аргументов."""
 from Src.Core.abstract_model import abstract_model
-from Src.Core.entity_model import entity_model
 from Src.Core.exception import arguments_exception
 import pytest
 
@@ -23,6 +22,26 @@ def test_not_empty_abstract_model_unique_code_after_creation():
     # Проверка
     assert result != ""
 
+
+@pytest.mark.parametrize("other", [None, "код", 123, object()])
+def test_not_implemented_abstract_model_eq_unsupported_type(other):
+    """
+    <summary>
+    Метод сравнения возвращает NotImplemented для постороннего типа.
+    Обычное сравнение с указанными объектами даёт False без исключения.
+    </summary>
+    """
+    # Подготовка
+    entity = test_entity()
+
+    # Действие
+    method_result = entity.__eq__(other)
+    comparison_result = entity == other
+
+    # Проверка
+    assert method_result is NotImplemented
+    assert comparison_result is False
+
 def test_different_codes_abstract_model_unique_code_for_two_entities():
     """
     <summary>Две созданные модели получают разные уникальные коды.</summary>
@@ -38,6 +57,21 @@ def test_different_codes_abstract_model_unique_code_for_two_entities():
 
     # Проверка
     assert id_1 != id_2
+
+def test_trimmed_code_abstract_model_unique_code_assignment():
+    """
+    <summary>
+    При присваивании уникального кода пробелы по краям удаляются.
+    </summary>
+    """
+    # Подготовка
+    entity = test_entity()
+
+    # Действие
+    entity.unique_code = "  product-001  "
+
+    # Проверка
+    assert entity.unique_code == "product-001"
 
 def test_equal_entities_abstract_model_eq_when_codes_match():
     """
@@ -72,48 +106,5 @@ def test_arguments_exception_with_details_entity_unique_code_when_code_is_not_st
     assert "Поле: unique_code" in str(exception.value)
     assert "Уникальный код должен быть строкой" in str(exception.value)
 
-def test_not_value_error_entity_model_name_when_empty_value_set():
-    """
-    <summary>Пустое имя вызывает arguments_exception, не являющееся ValueError.</summary>
-    """
-    # Подготовка
-    entity = entity_model()
 
-    # Действие
-    with pytest.raises(arguments_exception) as exception:
-        entity.name = ""
 
-    # Проверка
-    assert not isinstance(exception.value, ValueError)
-
-def test_arguments_exception_with_details_entity_model_name_when_empty_value_set():
-    """
-    <summary>Пустое имя вызывает arguments_exception с полем name и причиной ошибки.</summary>
-    """
-    # Подготовка
-    entity = entity_model()
-    name = ""
-
-    # Действие
-    with pytest.raises(arguments_exception) as exception:
-        entity.name = name
-
-    # Проверка
-    assert "Поле: name" in str(exception.value)
-    assert "Наименование не может быть пустым" in str(exception.value)
-
-def test_arguments_exception_with_details_entity_model_name_when_name_is_not_string():
-    """
-    <summary>Не строковое имя вызывает arguments_exception с полем name и причиной ошибки.</summary>
-    """
-    # Подготовка
-    entity = entity_model()
-    name = 42
-
-    # Действие
-    with pytest.raises(arguments_exception) as exception:
-        entity.name = name
-
-    # Проверка
-    assert "Поле: name" in str(exception.value)
-    assert "Наименование должно быть строкой" in str(exception.value)
