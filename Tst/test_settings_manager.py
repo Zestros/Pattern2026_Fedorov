@@ -1,3 +1,4 @@
+"""Юнит-тесты менаджера настроек."""
 import pytest
 
 from Src.Logics.settings_manager import setting_manager
@@ -162,3 +163,4 @@ def test_operation_exception_convert_invalid_data(settings_data, invalid_case):
 
     # Проверка
     assert "Не удалось преобразовать настройки" in str(error.value)
+    assert manager.settings is previous_settings
