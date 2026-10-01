@@ -1,0 +1,41 @@
+from Src.Core.abstract_manager import abstract_manager
+import json
+from Src.Core.validator import validator, operation_exception
+from Src.Models.settings_model import settings_model
+from Src.Models.company_model import company_model
+
+class setting_manager(abstract_manager):
+    __default_file_name: str = 'settings.json'
+    __settings: settings_model = None
+
+    def __new__(cls):
+        """Создаёт единственный экземпляр или возвращает существующий."""
+        if not hasattr(cls, 'instance'):
+            cls.instance = super(setting_manager, cls).__new__(cls)
+        return cls.instance
+
+    def load(self, file_name = ""):
+        inner_file_name = file_name if file_name.strip() != "" else self.__default_file_name
+        validator.validate(inner_file_name, str)
+
+        try:
+            with open(inner_file_name, "r") as file:
+                self._data = json.load(file)
+                self._is_loaded = self.convert()
+        except Exception as ec:
+            raise operation_exception
+
+    @property
+    def settings(self) -> settings_model:
+        return self.__settings
+
+    def convert(self) -> bool:
+        data = self._data
+
+        settings = settings_model()
+        settings.company = company_model(**data["company"])
+        settings.boss_name = data["boss_name"]
+        settings.account_name = data["account_name"]
+
+        self.__settings = settings
+        return True
