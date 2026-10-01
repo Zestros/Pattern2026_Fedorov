@@ -1,10 +1,11 @@
 from Src.Core.exception import arguments_exception
 
-"""
-Исключение при выполнении бизнес операции
-"""  
 class operation_exception(Exception):
-    pass  
+    """Ошибка выполнения бизнес-операции с описанием причины."""
+
+    def __init__(self, message: str = "") -> None:
+        """Передаёт сообщение базовому классу исключений."""
+        super().__init__(message)
 
 
 class validator:
