@@ -136,12 +136,20 @@ def test_created_settings_convert_valid_data(settings_data, first_start):
     assert manager.settings.first_start is first_start
 
 
-@pytest.mark.parametrize("invalid_case", ["missing_first_start", "invalid_first_start"])
-def test_operation_exception_convert_invalid_data(settings_data, invalid_case):
+@pytest.mark.parametrize(
+    "invalid_case, expected_message",
+    [
+        ("missing_first_start", "Отсутствует обязательное поле: first_start"),
+        ("invalid_first_start", "Не удалось преобразовать настройки"),
+    ],
+)
+def test_operation_exception_convert_invalid_data(
+    settings_data, invalid_case, expected_message
+):
     """
     <summary>
-    Отсутствующий first_start или строка вместо bool приводят к
-    operation_exception с сообщением о неудачном преобразовании.
+    Отсутствующий first_start или строка вместо bool вызывают
+    operation_exception с соответствующим сообщением.
     Предыдущие корректные настройки сохраняются.
     </summary>
     """
@@ -162,5 +170,33 @@ def test_operation_exception_convert_invalid_data(settings_data, invalid_case):
         manager.convert()
 
     # Проверка
-    assert "Не удалось преобразовать настройки" in str(error.value)
+    assert expected_message in str(error.value)
     assert manager.settings is previous_settings
+
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["company", "boss_name", "account_name", "first_start"],
+)
+def test_operation_exception_convert_missing_required_field(
+    settings_data, field
+):
+    """
+    <summary>
+    Отсутствие каждого обязательного поля вызывает operation_exception.
+    Сообщение указывает, какое поле отсутствует.
+    </summary>
+    """
+    # Подготовка
+    manager = setting_manager()
+    invalid_data = dict(settings_data)
+    del invalid_data[field]
+    manager._data = invalid_data
+
+    # Действие
+    with pytest.raises(operation_exception) as error:
+        manager.convert()
+
+    # Проверка
+    assert f"Отсутствует обязательное поле: {field}" in str(error.value)

@@ -37,6 +37,19 @@ class setting_manager(abstract_manager):
         try:
             data = self._data
 
+            required_fields = (
+                "company",
+                "boss_name",
+                "account_name",
+                "first_start",
+            )
+
+            for field in required_fields:
+                if field not in data:
+                    raise operation_exception(
+                        f"Отсутствует обязательное поле: {field}"
+                    )
+
             settings = settings_model()
             settings.company = company_model(**data["company"])
             settings.boss_name = data["boss_name"]
@@ -45,6 +58,8 @@ class setting_manager(abstract_manager):
 
             self.__settings = settings
             return True
+        except operation_exception:
+            raise
         except Exception as error:
             raise operation_exception(
                 "Не удалось преобразовать настройки"
