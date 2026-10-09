@@ -77,8 +77,8 @@ class storage_manager(abstract_manager):
             if self.__settings.first_start:
                 group = group_model("Бакалея")
 
-                gram = unit_model("грамм")
-                kilogram = unit_model("килограмм", 1000, gram)
+                kilogram = unit_model.create_kilogram()
+                gram = kilogram.base_unit
 
                 warehouse = warehouse_model("Основной склад")
 

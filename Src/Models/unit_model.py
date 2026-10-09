@@ -78,3 +78,13 @@ class unit_model(entity_model):
     def base_unit(self) -> unit_model:
         """Возвращает базовую единицу измерения."""
         return self.__base_unit
+
+
+    """
+    Фабричный метод - создать килограмм
+    """
+    @staticmethod
+    def create_kilogram() -> unit_model:
+        """Создаёт килограмм с коэффициентом 1000 относительно грамма."""
+        gram = unit_model("грамм")
+        return unit_model("килограмм", 1000, gram)

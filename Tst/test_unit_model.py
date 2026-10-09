@@ -192,3 +192,26 @@ def test_converted_quantity_unit_model_kilograms_to_grams():
     # Проверка
     assert kilogram.base_unit is gram
     assert quantity_in_grams == 2000
+
+
+def test_created_kilogram_create_kilogram_default():
+    """
+    <summary>
+    Фабрика создаёт килограмм с коэффициентом пересчёта 1000.
+    Его базовая единица — грамм с коэффициентом 1 и ссылкой на себя.
+    Килограмм и грамм получают разные уникальные коды.
+    </summary>
+    """
+    # Действие
+    kilogram = unit_model.create_kilogram()
+
+    # Проверка
+    gram = kilogram.base_unit
+
+    assert kilogram.name == "килограмм"
+    assert kilogram.coefficient == 1000
+    assert gram.name == "грамм"
+    assert gram.coefficient == 1
+    assert gram.base_unit is gram
+    assert kilogram.unique_code != gram.unique_code
+
