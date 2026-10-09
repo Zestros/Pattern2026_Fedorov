@@ -1,4 +1,5 @@
 from Src.Core.exception import arguments_exception
+import math
 
 class operation_exception(Exception):
     """Ошибка выполнения бизнес-операции с описанием причины."""
@@ -43,5 +44,28 @@ class validator:
                     field,
                     f"Длина строки не должна превышать {len_} символов",
                 )
+
+        return True
+
+    @staticmethod
+    def validate_number(
+        value: int | float,
+        field: str,
+        allow_zero: bool = True,
+    ) -> bool:
+        """Проверяет тип, конечность и допустимый диапазон числа."""
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise arguments_exception(field, "Ожидается число")
+
+        if isinstance(value, float) and not math.isfinite(value):
+            raise arguments_exception(field, "Число должно быть конечным")
+
+        if value < 0 or (not allow_zero and value == 0):
+            raise arguments_exception(
+                field,
+                "Ожидается неотрицательное число"
+                if allow_zero
+                else "Ожидается положительное число",
+            )
 
         return True

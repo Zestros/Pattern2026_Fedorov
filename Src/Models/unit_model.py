@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-
+from Src.Core.validator import validator
 from Src.Core.entity_model import entity_model
 from Src.Core.exception import arguments_exception
 
@@ -80,6 +80,30 @@ class unit_model(entity_model):
         return self.__base_unit
 
 
+    def convert_to(
+        self,
+        quantity: int | float,
+        target_unit: unit_model,
+    ) -> float:
+        """Переводит количество в единицу с общей базовой единицей."""
+        validator.validate_number(quantity, "quantity")
+        validator.validate(
+            target_unit,
+            unit_model,
+            field="target_unit",
+        )
+
+        if self.base_unit != target_unit.base_unit:
+            raise arguments_exception(
+                "target_unit",
+                "Единицы имеют разные базовые единицы",
+            )
+
+        return quantity * (
+            self.coefficient / target_unit.coefficient
+        )
+
+
     """
     Фабричный метод - создать килограмм
     """
@@ -88,3 +112,4 @@ class unit_model(entity_model):
         """Создаёт килограмм с коэффициентом 1000 относительно грамма."""
         gram = unit_model("грамм")
         return unit_model("килограмм", 1000, gram)
+

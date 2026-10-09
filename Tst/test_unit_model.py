@@ -215,3 +215,55 @@ def test_created_kilogram_create_kilogram_default():
     assert gram.base_unit is gram
     assert kilogram.unique_code != gram.unique_code
 
+
+@pytest.mark.parametrize(
+    "quantity, expected",
+    [
+        (300, 0.3),
+        (1500, 1.5),
+        (0, 0),
+    ],
+)
+def test_converted_quantity_convert_to_grams_to_kilograms(
+    quantity, expected,
+):
+    """
+    <summary>
+    Граммы переводятся в килограммы.
+    Проверяются дробный результат и нулевое количество.
+    </summary>
+    """
+    gram = unit_model("грамм")
+    kilogram = unit_model("килограмм", 1000, gram)
+
+    result = gram.convert_to(quantity, kilogram)
+
+    assert result == pytest.approx(expected)
+
+
+def test_unchanged_quantity_convert_to_same_unit():
+    """
+    <summary>
+    Перевод в исходную единицу сохраняет количество.
+    </summary>
+    """
+    gram = unit_model("грамм")
+
+    result = gram.convert_to(12.5, gram)
+
+    assert result == pytest.approx(12.5)
+
+def test_arguments_exception_convert_to_incompatible_units():
+    """
+    <summary>
+    Перевод объёма в массу отклоняется:
+    у миллилитра и грамма разные базовые единицы.
+    </summary>
+    """
+    gram = unit_model("грамм")
+    milliliter = unit_model("миллилитр")
+
+    with pytest.raises(arguments_exception) as error:
+        milliliter.convert_to(100, gram)
+
+    assert "Поле: target_unit" in str(error.value)
