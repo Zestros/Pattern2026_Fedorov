@@ -3,6 +3,7 @@ from Src.Core.exception import arguments_exception
 from Src.Models.group_model import group_model
 from Src.Models.unit_model import unit_model
 from Src.Models.ratio_value_model import ratio_value_model
+from Src.Models.ratio_unit_model import ratio_unit_model
 from Src.Core.validator import validator
 
 
@@ -129,3 +130,37 @@ class item_model(entity_model):
             return self.mass_ratio.calculate_mass(quantity, source, target_unit)
 
         return source.convert_to(quantity, target_unit)
+
+    @staticmethod
+    def create_flour(group: group_model, kilogram: unit_model) -> "item_model":
+        """Создаёт пшеничную муку с учётом в килограммах."""
+        return item_model("Мука", "Мука пшеничная", group, kilogram)
+
+    @staticmethod
+    def create_water(
+        group: group_model, kilogram: unit_model, liter: unit_model,
+    ) -> "item_model":
+        """Создаёт воду с принятой для примера плотностью 1 кг/л."""
+        return item_model(
+            "Вода", "Вода питьевая", group, liter,
+            mass_ratio=ratio_value_model(
+                1, ratio_unit_model.kilograms_per_liter(kilogram, liter)
+            ),
+        )
+
+    @staticmethod
+    def create_oil(
+        group: group_model, kilogram: unit_model, liter: unit_model,
+    ) -> "item_model":
+        """Создаёт масло с принятой для примера плотностью 0.9 кг/л."""
+        return item_model(
+            "Масло", "Масло растительное", group, liter,
+            mass_ratio=ratio_value_model(
+                0.9, ratio_unit_model.kilograms_per_liter(kilogram, liter)
+            ),
+        )
+
+    @staticmethod
+    def create_salt(group: group_model, kilogram: unit_model) -> "item_model":
+        """Создаёт соль с учётом в килограммах."""
+        return item_model("Соль", "Соль пищевая", group, kilogram)

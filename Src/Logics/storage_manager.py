@@ -5,6 +5,7 @@ from Src.Models.settings_model import settings_model
 from Src.Models.warehouse_model import warehouse_model
 from Src.Models.unit_model import unit_model
 from Src.Models.item_model import item_model
+from Src.Models.recipe_item_model import recipe_item_model
 from Src.Models.group_model import group_model
 
 
@@ -75,24 +76,23 @@ class storage_manager(abstract_manager):
             groups = []
 
             if self.__settings.first_start:
-                group = group_model("Бакалея")
-
+                group = group_model.create_grocery()
+                warehouse = warehouse_model.create_main()
                 kilogram = unit_model.create_kilogram()
                 gram = kilogram.base_unit
+                liter = unit_model.create_liter()
+                milliliter = liter.base_unit
+                piece = unit_model.create_piece()
 
-                warehouse = warehouse_model("Основной склад")
-
-                flour = item_model(
-                    "Мука",
-                    "Мука пшеничная",
-                    group,
-                    kilogram,
-                )
+                dough = recipe_item_model.create_dough(group, kilogram, liter)
+                bread = recipe_item_model.create_flatbreads(dough, piece)
 
                 groups.append(group)
-                units.extend([gram, kilogram])
                 warehouses.append(warehouse)
-                items.append(flour)
+                units.extend([gram, kilogram, milliliter, liter, piece])
+                # Регистрируем те же продукты, на которые ссылается карта.
+                items.extend(row.item for row in dough.recipe.ingredients)
+                items.extend([dough, bread])
 
             self.__warehouses = warehouses
             self.__units = units

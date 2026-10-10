@@ -113,3 +113,14 @@ class unit_model(entity_model):
         gram = unit_model("грамм")
         return unit_model("килограмм", 1000, gram)
 
+
+    @staticmethod
+    def create_liter() -> unit_model:
+        """Создаёт литр с базовой единицей — миллилитром."""
+        milliliter = unit_model("миллилитр")
+        return unit_model("литр", 1000, milliliter)
+
+    @staticmethod
+    def create_piece() -> unit_model:
+        """Создаёт базовую единицу количества — штуку."""
+        return unit_model("штука")

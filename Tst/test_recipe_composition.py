@@ -219,3 +219,22 @@ def test_preserved_quantity_recipe_ingredient_model_invalid_change():
         row.quantity = -1
     assert row.quantity == 100
     assert recipe.net_weight == pytest.approx(100)
+
+
+def test_updated_weights_recipe_model_added_nested_ingredient():
+    """<summary>Новый ингредиент вложенной карты изменяет брутто и нетто родителя.</summary>"""
+    gram = unit_model("грамм")
+    piece = unit_model("штука")
+    group = group_model("Бакалея")
+    flour = item_model("Мука", "Мука пшеничная", group, gram)
+    salt = item_model("Соль", "Соль пищевая", group, gram)
+    inner = recipe_model("Заготовка", gram, 0.9)
+    inner.add_ingredient(flour, 100)
+    product = recipe_item_model("Заготовка", "Заготовка", group, piece, inner, 1)
+    outer = recipe_model("Блюдо", gram, 0.8)
+    outer.add_ingredient(product, 2)
+    assert outer.gross_weight == pytest.approx(180)
+    assert outer.net_weight == pytest.approx(144)
+    inner.add_ingredient(salt, 10)
+    assert outer.gross_weight == pytest.approx(198)
+    assert outer.net_weight == pytest.approx(158.4)

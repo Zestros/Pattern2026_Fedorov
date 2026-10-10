@@ -71,3 +71,44 @@ class recipe_item_model(item_model):
         else:
             fraction = quantity / self.output_quantity
         return self.recipe.mass_unit.convert_to(packaging * fraction, target_unit)
+
+    @staticmethod
+    def create_dough(
+        group: group_model, kilogram: unit_model, liter: unit_model,
+    ) -> recipe_item_model:
+        """Создаёт тесто и его состав по стартовому рецепту."""
+        flour = item_model.create_flour(group, kilogram)
+        water = item_model.create_water(group, kilogram, liter)
+        oil = item_model.create_oil(group, kilogram, liter)
+        salt = item_model.create_salt(group, kilogram)
+        recipe = recipe_model(
+            "Тесто для пшеничных лепёшек", kilogram.base_unit,
+            mass_coefficient=1,
+        )
+        recipe.add_ingredient(flour, 0.3)
+        recipe.add_ingredient(water, 0.18)
+        recipe.add_ingredient(oil, 0.015)
+        recipe.add_ingredient(salt, 0.005)
+        return recipe_item_model(
+            "Тесто", "Тесто для пшеничных лепёшек", group, kilogram, recipe,
+        )
+
+    @staticmethod
+    def create_flatbreads(
+        dough: recipe_item_model, piece: unit_model,
+    ) -> recipe_item_model:
+        """Создаёт шесть лепёшек из полной партии теста на момент создания."""
+        validator.validate(dough, recipe_item_model, field="dough")
+        validator.validate(piece, unit_model, field="piece")
+        recipe = recipe_model(
+            "Пшеничные лепёшки", dough.recipe.mass_unit,
+            mass_coefficient=0.9,
+        )
+        dough_quantity = dough.recipe.mass_unit.convert_to(
+            dough.recipe.net_weight, dough.unit,
+        )
+        recipe.add_ingredient(dough, dough_quantity)
+        return recipe_item_model(
+            "Пшеничные лепёшки", "Пшеничные лепёшки",
+            dough.group, piece, recipe, output_quantity=6,
+        )
