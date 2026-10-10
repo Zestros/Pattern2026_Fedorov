@@ -8,6 +8,7 @@ from Src.Models.warehouse_model import warehouse_model
 from Src.Models.unit_model import unit_model
 from Src.Models.group_model import group_model
 from Src.Models.item_model import item_model
+from Src.Models.recipe_item_model import recipe_item_model
 
 
 @pytest.fixture(autouse=True)
@@ -281,41 +282,27 @@ def test_added_unit_add_unit_registered_base(manager):
 def test_filled_collections_storage_manager_first_start(settings):
     """
     <summary>
-    Первый старт создаёт основной склад, группу Бакалея, грамм,
-    килограмм и муку. Номенклатура использует общие объекты справочников.
-    Коды всех созданных объектов уникальны.
+    Первый старт создаёт склад, группу, единицы измерения,
+    четыре базовых продукта, тесто и пшеничные лепёшки.
+    Все объекты имеют уникальные коды.
     </summary>
     """
-    # Подготовка
     settings.first_start = True
 
-    # Действие
     manager = storage_manager(settings)
 
-    # Проверка
     assert manager.is_loaded() is True
     assert len(manager.warehouses) == 1
     assert len(manager.groups) == 1
-    assert len(manager.units) == 2
-    assert len(manager.items) == 1
+    assert len(manager.units) == 5
+    assert len(manager.items) == 6
 
     assert manager.warehouses[0].name == "Основной склад"
     assert manager.groups[0].name == "Бакалея"
-
-    units = {unit.name: unit for unit in manager.units}
-    gram = units["грамм"]
-    kilogram = units["килограмм"]
-
-    assert gram.base_unit is gram
-    assert gram.coefficient == 1
-    assert kilogram.base_unit is gram
-    assert kilogram.coefficient == 1000
-
-    flour = manager.items[0]
-    assert flour.name == "Мука"
-    assert flour.full_name == "Мука пшеничная"
-    assert flour.group is manager.groups[0]
-    assert flour.unit is kilogram
+    assert {item.name for item in manager.items} == {
+        "Мука", "Вода", "Масло", "Соль",
+        "Тесто", "Пшеничные лепёшки",
+    }
 
     all_models = (
         manager.warehouses
@@ -361,3 +348,84 @@ def test_preserved_data_convert_repeated_call(settings):
     for before, after in zip(previous, current):
         assert len(before) == len(after)
         assert all(old is new for old, new in zip(before, after))
+
+
+def test_created_recipes_storage_manager_first_start(settings):
+    """
+    <summary>
+    Лепёшки содержат полуфабрикат «Тесто».
+    Карта теста использует зарегистрированные продукты.
+    Массы соответствуют рецепту из Markdown.
+    </summary>
+    """
+    settings.first_start = True
+    manager = storage_manager(settings)
+    items = {item.name: item for item in manager.items}
+
+    dough = items["Тесто"]
+    bread = items["Пшеничные лепёшки"]
+
+    assert isinstance(dough, recipe_item_model)
+    assert isinstance(bread, recipe_item_model)
+
+    assert len(dough.recipe.ingredients) == 4
+    composition = {
+        row.item.name: row.quantity
+        for row in dough.recipe.ingredients
+    }
+    assert composition == {
+        "Мука": 0.3,
+        "Вода": 0.18,
+        "Масло": 0.015,
+        "Соль": 0.005,
+    }
+
+    for row in dough.recipe.ingredients:
+        assert row.item is items[row.item.name]
+
+    assert len(bread.recipe.ingredients) == 1
+    dough_row = bread.recipe.ingredients[0]
+    assert dough_row.item is dough
+    assert dough_row.quantity == pytest.approx(0.4985)
+
+    assert dough.recipe.gross_weight == pytest.approx(498.5)
+    assert dough.recipe.net_weight == pytest.approx(498.5)
+
+    assert bread.output_quantity == 6
+    assert bread.recipe.mass_coefficient == pytest.approx(0.9)
+    assert bread.recipe.gross_weight == pytest.approx(498.5)
+    assert bread.recipe.net_weight == pytest.approx(448.65)
+
+    gram = dough.recipe.mass_unit
+    assert bread.calculate_mass(1, gram) == pytest.approx(74.775)
+
+
+def test_preserved_recipes_storage_manager_repeated_initialization(settings):
+    """
+    <summary>
+    Повторное создание менеджера и вызов convert не создают
+    новые продукты, карты или строки рецептов.
+    </summary>
+    """
+    settings.first_start = True
+    first = storage_manager(settings)
+    previous_items = first.items
+    bread = next(
+        item for item in first.items
+        if item.name == "Пшеничные лепёшки"
+    )
+    previous_recipe = bread.recipe
+    previous_row = bread.recipe.ingredients[0]
+
+    second = storage_manager(settings)
+    second.convert()
+
+    assert second is first
+    assert len(second.items) == len(previous_items)
+    assert all(
+        before is after
+        for before, after in zip(previous_items, second.items)
+    )
+    assert bread.recipe is previous_recipe
+    assert bread.recipe.ingredients[0] is previous_row
+    assert bread.recipe.net_weight == pytest.approx(448.65)

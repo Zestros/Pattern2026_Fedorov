@@ -8,3 +8,9 @@ class group_model(entity_model):
         """Создаёт группу с уникальным кодом и наименованием."""
         super().__init__()
         self.name = name
+
+
+    @staticmethod
+    def create_grocery() -> "group_model":
+        """Создаёт группу базовых продуктов."""
+        return group_model("Бакалея")

@@ -2,6 +2,9 @@ from Src.Core.entity_model import entity_model
 from Src.Core.exception import arguments_exception
 from Src.Models.group_model import group_model
 from Src.Models.unit_model import unit_model
+from Src.Models.ratio_value_model import ratio_value_model
+from Src.Models.ratio_unit_model import ratio_unit_model
+from Src.Core.validator import validator
 
 
 class item_model(entity_model):
@@ -22,13 +25,17 @@ class item_model(entity_model):
         full_name: str,
         group: group_model,
         unit: unit_model,
+        mass_ratio: ratio_value_model | None = None,
     ) -> None:
-        """Создаёт номенклатуру с наименованиями, группой и единицей."""
+        """Создаёт номенклатуру с необязательной характеристикой массы."""
         super().__init__()
         self.name = name
         self.full_name = full_name
         self.group = group
         self.unit = unit
+
+        # Плотность или масса штуки с указанием составной единицы.
+        self.mass_ratio = mass_ratio
 
     @property
     def full_name(self) -> str:
@@ -91,3 +98,69 @@ class item_model(entity_model):
             )
 
         self.__unit = value
+
+    @property
+    def mass_ratio(self) -> ratio_value_model | None:
+        """Возвращает плотность или массу штуки с единицами измерения."""
+        return self.__mass_ratio
+
+    @mass_ratio.setter
+    def mass_ratio(self, value: ratio_value_model | None) -> None:
+        """Устанавливает характеристику массы или удаляет её через None."""
+        if value is not None:
+            validator.validate(value, ratio_value_model, field="mass_ratio")
+
+        self.__mass_ratio = value
+
+    def calculate_mass(
+        self,
+        quantity: int | float,
+        target_unit: unit_model,
+        source_unit: unit_model | None = None,
+    ) -> float:
+        """Рассчитывает массу в целевой единице; по умолчанию использует единицу учёта.
+
+        Целевая единица должна задавать массу. При наличии характеристики
+        исходная единица должна быть совместима с её знаменателем.
+        """
+        source = self.unit if source_unit is None else source_unit
+        validator.validate(source, unit_model, field="source_unit")
+
+        if self.mass_ratio is not None:
+            return self.mass_ratio.calculate_mass(quantity, source, target_unit)
+
+        return source.convert_to(quantity, target_unit)
+
+    @staticmethod
+    def create_flour(group: group_model, kilogram: unit_model) -> "item_model":
+        """Создаёт пшеничную муку с учётом в килограммах."""
+        return item_model("Мука", "Мука пшеничная", group, kilogram)
+
+    @staticmethod
+    def create_water(
+        group: group_model, kilogram: unit_model, liter: unit_model,
+    ) -> "item_model":
+        """Создаёт воду с принятой для примера плотностью 1 кг/л."""
+        return item_model(
+            "Вода", "Вода питьевая", group, liter,
+            mass_ratio=ratio_value_model(
+                1, ratio_unit_model.kilograms_per_liter(kilogram, liter)
+            ),
+        )
+
+    @staticmethod
+    def create_oil(
+        group: group_model, kilogram: unit_model, liter: unit_model,
+    ) -> "item_model":
+        """Создаёт масло с принятой для примера плотностью 0.9 кг/л."""
+        return item_model(
+            "Масло", "Масло растительное", group, liter,
+            mass_ratio=ratio_value_model(
+                0.9, ratio_unit_model.kilograms_per_liter(kilogram, liter)
+            ),
+        )
+
+    @staticmethod
+    def create_salt(group: group_model, kilogram: unit_model) -> "item_model":
+        """Создаёт соль с учётом в килограммах."""
+        return item_model("Соль", "Соль пищевая", group, kilogram)
