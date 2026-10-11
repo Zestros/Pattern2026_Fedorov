@@ -5,31 +5,39 @@ from Src.Models.group_model import group_model
 from Src.Models.item_model import item_model
 from Src.Models.recipe_model import recipe_model
 from Src.Models.unit_model import unit_model
-
+from Src.Core.exception import arguments_exception
 
 class recipe_item_model(item_model):
     """Составной продукт с картой; для штучного выхода задаётся размер партии."""
 
     def __init__(
-        self, name: str, full_name: str, group: group_model,
-        unit: unit_model, recipe: recipe_model,
+        self,
+        name: str,
+        full_name: str,
+        group: group_model,
+        unit: unit_model,
+        recipe: recipe_model,
         output_quantity: int | float | None = None,
     ) -> None:
-        """Связывает продукт с картой и выходом в единице учёта продукта.
-
-        Без output_quantity количество означает готовую массу.
-        При заданном выходе масса пропорциональна доле партии.
-        """
-        validator.validate(recipe, recipe_model, field="recipe")
-        validator.validate(unit, unit_model, field="unit")
-        if output_quantity is None:
-            unit.convert_to(1, recipe.mass_unit)
-        else:
-            validator.validate_number(output_quantity, "output_quantity", allow_zero=False)
+        """Создаёт составной продукт без выполнения расчётов."""
         super().__init__(name, full_name, group, unit)
-        # Неизменяемая ссылка защищает граф от обхода проверки циклов.
+
+        validator.validate(recipe, recipe_model, field="recipe")
+
+        if output_quantity is None:
+            if unit.base_unit != recipe.mass_unit.base_unit:
+                raise arguments_exception(
+                    "output_quantity",
+                    "Для продукта не в единицах массы необходимо указать выход партии",
+                )
+        else:
+            validator.validate_number(
+                output_quantity,
+                "output_quantity",
+                allow_zero=False,
+            )
+
         self.__recipe = recipe
-        # Выход одной партии в единице учёта; None для готовой массы.
         self.__output_quantity = output_quantity
 
     @property
@@ -111,4 +119,63 @@ class recipe_item_model(item_model):
         return recipe_item_model(
             "Пшеничные лепёшки", "Пшеничные лепёшки",
             dough.group, piece, recipe, output_quantity=6,
+        )
+
+    @staticmethod
+    def create_sponge_layers(
+        flour: item_model, sugar: item_model, eggs: item_model,
+        gram: unit_model, piece: unit_model,
+    ) -> recipe_item_model:
+        """Создаёт карту четырёх коржей из 600 г сырья с выходом 90%."""
+        validator.validate(flour, item_model, field="flour")
+        validator.validate(sugar, item_model, field="sugar")
+        validator.validate(eggs, item_model, field="eggs")
+        recipe = recipe_model("Бисквитные коржи", gram, mass_coefficient=0.9)
+        recipe.add_ingredient(flour, gram.convert_to(200, flour.unit))
+        recipe.add_ingredient(sugar, gram.convert_to(150, sugar.unit))
+        recipe.add_ingredient(eggs, gram.convert_to(250, eggs.unit))
+        return recipe_item_model(
+            "Бисквитный корж", "Бисквитный корж для торта",
+            flour.group, piece, recipe, output_quantity=4,
+        )
+
+    @staticmethod
+    def create_sour_cream(
+        sour_cream: item_model, sugar: item_model,
+        gram: unit_model, piece: unit_model,
+    ) -> recipe_item_model:
+        """Создаёт одну порцию крема из 300 г сметаны и 100 г сахара."""
+        validator.validate(sour_cream, item_model, field="sour_cream")
+        validator.validate(sugar, item_model, field="sugar")
+        recipe = recipe_model("Сметанный крем", gram, mass_coefficient=1)
+        recipe.add_ingredient(sour_cream, gram.convert_to(300, sour_cream.unit))
+        recipe.add_ingredient(sugar, gram.convert_to(100, sugar.unit))
+        return recipe_item_model(
+            "Порция крема", "Порция сметанного крема для торта",
+            sour_cream.group, piece, recipe, output_quantity=1,
+        )
+
+    @staticmethod
+    def create_cake(
+        group: group_model, gram: unit_model, piece: unit_model,
+    ) -> recipe_item_model:
+        """Собирает торт из трёх коржей и порции крема с отдельными картами."""
+        flour = item_model("Мука", "Мука пшеничная", group, gram)
+        sugar = item_model("Сахар", "Сахар белый", group, gram)
+        eggs = item_model("Яйцо", "Яйцо без скорлупы", group, gram)
+        sour_cream = item_model("Сметана", "Сметана для крема", group, gram)
+
+        layers = recipe_item_model.create_sponge_layers(
+            flour, sugar, eggs, gram, piece,
+        )
+        cream = recipe_item_model.create_sour_cream(
+            sour_cream, sugar, gram, piece,
+        )
+
+        recipe = recipe_model("Сборка бисквитного торта", gram, mass_coefficient=1)
+        recipe.add_ingredient(layers, 3)
+        recipe.add_ingredient(cream, 1)
+        return recipe_item_model(
+            "Бисквитный торт", "Бисквитный торт со сметанным кремом",
+            group, piece, recipe, output_quantity=1,
         )
