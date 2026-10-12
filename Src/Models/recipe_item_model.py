@@ -179,3 +179,22 @@ class recipe_item_model(item_model):
             "Бисквитный торт", "Бисквитный торт со сметанным кремом",
             group, piece, recipe, output_quantity=1,
         )
+
+    def calculate_net_weight(
+        self, quantity: int | float, target_unit: unit_model,
+    ) -> float:
+        """Возвращает пищевую массу готового полуфабриката."""
+        return self.calculate_mass(quantity, target_unit)
+
+    def calculate_gross_weight(
+        self, quantity: int | float, target_unit: unit_model,
+    ) -> float:
+        """Возвращает готовую массу полуфабриката с его упаковкой."""
+        return (
+            self.calculate_net_weight(quantity, target_unit)
+            + self.calculate_packaging_mass(quantity, target_unit)
+        )
+
+    def validate_recipe_path(self, path: set[int]) -> None:
+        """Продолжает проверку вложенности через собственную карту."""
+        self.recipe.validate_recipe_path(path)

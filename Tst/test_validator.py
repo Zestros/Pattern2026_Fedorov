@@ -13,7 +13,14 @@ def test_accepted_number_validate_number_valid_value(value):
     Неотрицательные целые и дробные числа проходят проверку.
     </summary>
     """
-    assert validator.validate_number(value, "quantity") is True
+    # Подготовка
+    # Используются входные данные, указанные в параметрах или вызове ниже.
+
+    # Действие
+    result = validator.validate_number(value, 'quantity')
+
+    # Проверка
+    assert result is True
 
 
 @pytest.mark.parametrize(
@@ -37,9 +44,15 @@ def test_arguments_exception_validate_number_invalid_value(value):
     Исключение содержит название проверяемого поля.
     </summary>
     """
+    # Подготовка
+    # Используются входные данные, указанные в параметрах или вызове ниже.
+
+    # Действие
     with pytest.raises(arguments_exception) as error:
         validator.validate_number(value, "quantity")
 
+    # Проверка
+    # pytest.raises проверяет ожидаемый тип исключения.
     assert "Поле: quantity" in str(error.value)
 
 
@@ -49,9 +62,15 @@ def test_arguments_exception_validate_number_zero_forbidden():
     Ноль отклоняется, когда требуется строго положительное число.
     </summary>
     """
+    # Подготовка
+    # Используются входные данные, указанные в параметрах или вызове ниже.
+
+    # Действие
     with pytest.raises(arguments_exception) as error:
         validator.validate_number(0, "density", allow_zero=False)
 
+    # Проверка
+    # pytest.raises проверяет ожидаемый тип исключения.
     assert "Поле: density" in str(error.value)
 
 
@@ -61,6 +80,11 @@ def test_accepted_number_validate_number_positive_value():
     Положительная дробь проходит проверку при запрете нуля.
     </summary>
     """
-    assert validator.validate_number(
-        0.9, "density", allow_zero=False
-    ) is True
+    # Подготовка
+    # Используются входные данные, указанные в параметрах или вызове ниже.
+
+    # Действие
+    result = validator.validate_number(0.9, 'density', allow_zero=False)
+
+    # Проверка
+    assert result is True

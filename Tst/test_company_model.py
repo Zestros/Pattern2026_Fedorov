@@ -28,6 +28,9 @@ def test_created_company_model_valid_parameters(company_parameters):
     Значения реквизитов используются как тестовые строки.
     </summary>
     """
+    # Подготовка
+    # Используются входные данные, указанные в параметрах или вызове ниже.
+
     # Действие
     company = company_model(**company_parameters)
 
@@ -35,6 +38,7 @@ def test_created_company_model_valid_parameters(company_parameters):
     assert isinstance(company, abstract_model)
     assert company.unique_code != ""
 
+    # Действие
     for field, expected_value in company_parameters.items():
         assert getattr(company, field) == expected_value
 

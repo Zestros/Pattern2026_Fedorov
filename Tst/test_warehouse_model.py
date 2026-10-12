@@ -14,6 +14,9 @@ def test_created_warehouse_model_valid_name():
     Модель наследует абстрактную базу и получает уникальный код.
     </summary>
     """
+    # Подготовка
+    # Используются входные данные, указанные в параметрах или вызове ниже.
+
     # Действие
     warehouse = warehouse_model("  Основной склад  ")
 
@@ -32,11 +35,15 @@ def test_arguments_exception_warehouse_model_invalid_name(name):
     arguments_exception с указанием поля name.
     </summary>
     """
+    # Подготовка
+    # Используются входные данные, указанные в параметрах или вызове ниже.
+
     # Действие
     with pytest.raises(arguments_exception) as error:
         warehouse_model(name)
 
     # Проверка
+    # pytest.raises проверяет ожидаемый тип исключения.
     assert "Поле: name" in str(error.value)
 
 

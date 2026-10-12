@@ -1,4 +1,5 @@
 from Src.Core.entity_model import entity_model
+from Src.Core.abstract_recipe_component import abstract_recipe_component
 from Src.Core.exception import arguments_exception
 from Src.Models.group_model import group_model
 from Src.Models.unit_model import unit_model
@@ -7,7 +8,7 @@ from Src.Models.ratio_unit_model import ratio_unit_model
 from Src.Core.validator import validator
 
 
-class item_model(entity_model):
+class item_model(entity_model, abstract_recipe_component):
     """Номенклатура: сырьё, полуфабрикат, блюдо или упаковка."""
 
     # Полное наименование номенклатуры.
@@ -164,3 +165,19 @@ class item_model(entity_model):
     def create_salt(group: group_model, kilogram: unit_model) -> "item_model":
         """Создаёт соль с учётом в килограммах."""
         return item_model("Соль", "Соль пищевая", group, kilogram)
+
+    def calculate_net_weight(
+        self, quantity: int | float, target_unit: unit_model,
+    ) -> float:
+        """Возвращает чистую массу обычного продукта."""
+        return self.calculate_mass(quantity, target_unit)
+
+    def calculate_gross_weight(
+        self, quantity: int | float, target_unit: unit_model,
+    ) -> float:
+        """Возвращает массу обычного продукта без отдельно заданной упаковки."""
+        return self.calculate_net_weight(quantity, target_unit)
+
+    def validate_recipe_path(self, path: set[int]) -> None:
+        """Завершает обход: обычный продукт не имеет вложенной карты."""
+        return

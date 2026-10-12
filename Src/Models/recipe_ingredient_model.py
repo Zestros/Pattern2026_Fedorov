@@ -2,20 +2,19 @@ from __future__ import annotations
 
 from Src.Core.abstract_model import abstract_model
 from Src.Core.validator import validator
-from Src.Models.item_model import item_model
-
-
+from Src.Core.abstract_recipe_component import abstract_recipe_component
+from Src.Models.unit_model import unit_model
 
 class recipe_ingredient_model(abstract_model):
     """Строка состава: продукт, количество и назначение в текущей карте."""
 
     def __init__(
-        self, item: item_model, quantity: int | float,
+        self, item: abstract_recipe_component, quantity: int | float,
         is_packaging: bool = False,
     ) -> None:
         """Создаёт строку с количеством в единице учёта продукта."""
         super().__init__()
-        validator.validate(item, item_model, field="item")
+        validator.validate(item, abstract_recipe_component, field="item")
         validator.validate(is_packaging, bool, field="is_packaging")
         # Ссылка неизменяема: замена продукта должна проходить проверку карты.
         self.__item = item
@@ -24,7 +23,7 @@ class recipe_ingredient_model(abstract_model):
         self.quantity = quantity
 
     @property
-    def item(self) -> item_model:
+    def item(self) -> abstract_recipe_component:
         """Возвращает обычный или составной продукт."""
         return self.__item
 
@@ -44,9 +43,17 @@ class recipe_ingredient_model(abstract_model):
         """Показывает, используется ли продукт как упаковка в этой карте."""
         return self.__is_packaging
 
-    @property
-    def recipe(self) -> recipe_model | None:
-        """Возвращает карту составного продукта без дублирования ссылки."""
-        from Src.Models.recipe_item_model import recipe_item_model
-        
-        return self.item.recipe if isinstance(self.item, recipe_item_model) else None
+    def calculate_net_weight(self, target_unit: unit_model) -> float:
+        """Возвращает пищевой вклад строки; упаковка даёт нулевой вклад."""
+        validator.validate(target_unit, unit_model, field="target_unit")
+        if self.is_packaging:
+            return 0.0
+        return self.item.calculate_net_weight(self.quantity, target_unit)
+
+    def calculate_gross_weight(self, target_unit: unit_model) -> float:
+        """Возвращает полную массу компонента с учётом количества строки."""
+        return self.item.calculate_gross_weight(self.quantity, target_unit)
+
+    def validate_recipe_path(self, path: set[int]) -> None:
+        """Передаёт проверку вложенности компоненту строки."""
+        self.item.validate_recipe_path(path)

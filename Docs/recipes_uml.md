@@ -12,6 +12,12 @@
 classDiagram
     direction TB
 
+    class abstract_recipe_component {
+        <<interface>>
+        +calculate_net_weight(quantity, target_unit) float
+        +calculate_gross_weight(quantity, target_unit) float
+        +validate_recipe_path(path) None
+    }
     class abstract_model {
         +str unique_code
     }
@@ -46,14 +52,16 @@ classDiagram
         +float packaging_weight
         +add_ingredient(item, quantity, is_packaging) recipe_ingredient_model
         +remove_ingredient(ingredient) None
-        -__check_cycles(path) None
+        +validate_recipe_path(path) None
         -__food_weight() float
     }
     class recipe_ingredient_model {
-        +item_model item
+        +abstract_recipe_component item
         +number quantity
         +bool is_packaging
-        +recipe_model recipe
+        +calculate_net_weight(target_unit) float
+        +calculate_gross_weight(target_unit) float
+        +validate_recipe_path(path) None
     }
     class validator {
         +validate(value, type_, len_, field) bool$
@@ -62,16 +70,15 @@ classDiagram
 
     abstract_model <|-- entity_model
     entity_model <|-- item_model
+    abstract_recipe_component <|.. item_model
     item_model <|-- recipe_item_model
     entity_model <|-- recipe_model
     abstract_model <|-- recipe_ingredient_model
 
     recipe_item_model "0..*" --> "1" recipe_model : recipe
     recipe_model "0..*" o-- "0..*" recipe_ingredient_model : ingredients
-    recipe_ingredient_model "0..*" --> "1" item_model : item
-    recipe_ingredient_model ..> recipe_model : recipe вычисляется через item
-    recipe_model ..> item_model : calculate_mass
-    recipe_model ..> recipe_item_model : вложенная упаковка
+    recipe_ingredient_model "0..*" --> "1" abstract_recipe_component : item
+    recipe_model ..> abstract_recipe_component : контракт компонентов
     recipe_model ..> validator : проверка аргументов
     recipe_ingredient_model ..> validator : проверка количества
     recipe_item_model ..> validator : проверка выхода
@@ -86,8 +93,10 @@ classDiagram
   без него количество означает готовую массу весового продукта.
 - **`recipe_ingredient_model`** хранит количество и назначение продукта
   в конкретной карте. `item` и `is_packaging` доступны только для чтения,
-  `quantity` изменяется через валидируемый сеттер. Свойство `recipe` возвращает
-  карту составного продукта либо `None`, отдельная ссылка не хранится.
+  `quantity` изменяется через валидируемый сеттер. Методы расчёта двух масс
+  учитывают количество и роль упаковки. Ссылки на карту у строки нет.
+- **`abstract_recipe_component`** задаёт общий контракт двух масс и проверки
+  вложенности. Обычный продукт завершает обход, составной передаёт его своей карте.
 - **`recipe_model`** управляет составом, проверяет циклы до добавления строки
   и вычисляет итоговые массы. `add_ingredient()` создаёт и возвращает строку;
   также допускается передача готовой строки.
@@ -96,6 +105,11 @@ classDiagram
 позволяет передать одну строку в разные карты, поэтому связь карты со строками
 показана агрегацией, а не исключительным владением. Повторное добавление той же
 строки в одну карту запрещено. Удаление выполняется по идентичности строки.
+
+Карта и строка не импортируют `recipe_item_model` и не проверяют его тип.
+Составной продукт зависит от карты, карта через строки — от общего контракта.
+Метод `validate_recipe_path()` продолжает обход полиморфно. Взаимных импортов
+конкретных моделей больше нет; рекурсивные вызовы для вложенных данных сохранены.
 
 Ссылка `recipe_item_model.recipe` доступна только для чтения. Проверка циклов
 обходит текущий путь вложенных карт: прямые и косвенные циклы запрещены,
@@ -110,6 +124,12 @@ classDiagram
 Брутто = входная пищевая масса + упаковка
 Нетто = входная пищевая масса × коэффициент выхода
 ```
+
+Методы компонента `calculate_net_weight()` и `calculate_gross_weight()`
+возвращают массы готового продукта без упаковки и с упаковкой. Строка упаковки
+возвращает нулевой пищевой вклад. Разница двух масс строки даёт её вклад упаковки.
+Формулы самой карты пока сохранены: её `gross_weight` относится к входной массе,
+а не к массе готового упакованного продукта.
 
 Масса пищевой строки составного продукта берётся из готового нетто вложенной
 карты с учётом доли партии либо из заданного количества готового весового

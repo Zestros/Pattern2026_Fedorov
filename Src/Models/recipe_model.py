@@ -3,7 +3,7 @@ from __future__ import annotations
 from Src.Core.entity_model import entity_model
 from Src.Core.exception import arguments_exception
 from Src.Core.validator import validator
-from Src.Models.item_model import item_model
+from Src.Core.abstract_recipe_component import abstract_recipe_component
 from Src.Models.recipe_ingredient_model import recipe_ingredient_model
 from Src.Models.unit_model import unit_model
 
@@ -43,7 +43,7 @@ class recipe_model(entity_model):
         return tuple(self.__ingredients)
 
     def add_ingredient(
-        self, item: item_model | recipe_ingredient_model,
+        self, item: abstract_recipe_component | recipe_ingredient_model,
         quantity: int | float | None = None, *, is_packaging: bool = False,
     ) -> recipe_ingredient_model:
         """Создаёт строку либо принимает готовую; проверяет циклы до добавления."""
@@ -56,19 +56,17 @@ class recipe_model(entity_model):
             ingredient = recipe_ingredient_model(item, quantity, is_packaging)
         if any(row is ingredient for row in self.__ingredients):
             raise arguments_exception("ingredient", "Эта строка уже добавлена")
-        if ingredient.recipe is not None:
-            ingredient.recipe.__check_cycles({id(self)})
+        ingredient.validate_recipe_path({id(self)})
         self.__ingredients.append(ingredient)
         return ingredient
 
-    def __check_cycles(self, path: set[int]) -> None:
+    def validate_recipe_path(self, path: set[int]) -> None:
         """Проверяет текущий путь; общие карты в независимых ветках разрешены."""
         if id(self) in path:
             raise arguments_exception("recipe", "Циклическая ссылка между картами")
         next_path = path | {id(self)}
         for ingredient in self.__ingredients:
-            if ingredient.recipe is not None:
-                ingredient.recipe.__check_cycles(next_path)
+            ingredient.validate_recipe_path(next_path)
 
     def remove_ingredient(self, ingredient: recipe_ingredient_model) -> None:
         """Удаляет конкретную строку, не затрагивая другие строки того же продукта."""
@@ -82,22 +80,18 @@ class recipe_model(entity_model):
     def __food_weight(self) -> float:
         """Суммирует готовую пищевую массу ингредиентов до текущей обработки."""
         return sum((
-            row.item.calculate_mass(row.quantity, self.mass_unit)
-            for row in self.__ingredients if not row.is_packaging
+            row.calculate_net_weight(self.mass_unit)
+            for row in self.__ingredients
         ), 0.0)
 
     @property
     def packaging_weight(self) -> float:
-        """Суммирует прямую упаковку и упаковку внутри составных продуктов."""
-        from Src.Models.recipe_item_model import recipe_item_model
-
-        result = 0.0
-        for row in self.__ingredients:
-            if row.is_packaging:
-                result += row.item.calculate_mass(row.quantity, self.mass_unit)
-            if isinstance(row.item, recipe_item_model):
-                result += row.item.calculate_packaging_mass(row.quantity, self.mass_unit)
-        return result
+        """Суммирует упаковку через общий интерфейс масс строк."""
+        return sum((
+            row.calculate_gross_weight(self.mass_unit)
+            - row.calculate_net_weight(self.mass_unit)
+            for row in self.__ingredients
+        ), 0.0)
 
     @property
     def gross_weight(self) -> float:

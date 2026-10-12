@@ -11,40 +11,74 @@ from Src.Models.unit_model import unit_model
 
 
 def test_updated_weights_add_ingredient_convenient_creation():
-    """<summary>Карта создаёт строку; её количество меняет обе массы, удаление обнуляет их.</summary>"""
+    """
+    <summary>
+    Карта создаёт строку; её количество меняет обе массы, удаление обнуляет их.
+    </summary>
+    """
+    # Подготовка
     gram = unit_model("грамм")
     flour = item_model("Мука", "Мука", group_model("Продукты"), gram)
     recipe = recipe_model("Тесто", gram, 0.8)
+
+    # Действие
     row = recipe.add_ingredient(flour, 100)
+
+    # Проверка
     assert row.item is flour
-    assert row.recipe is None
+
+    # Действие
     row.quantity = 200
+
+    # Проверка
     assert recipe.gross_weight == pytest.approx(200)
     assert recipe.net_weight == pytest.approx(160)
+
+    # Действие
     recipe.remove_ingredient(row)
+
+    # Проверка
     assert recipe.gross_weight == 0
     assert recipe.net_weight == 0
 
 
 def test_calculated_weights_recipe_model_packaging():
-    """<summary>Упаковка входит только в брутто и не умножается на коэффициент обработки.</summary>"""
+    """
+    <summary>
+    Упаковка входит только в брутто и не умножается на коэффициент обработки.
+    </summary>
+    """
+    # Подготовка
     gram = unit_model("грамм")
     group = group_model("Продукты")
     food = item_model("Продукт", "Продукт", group, gram)
     packaging = item_model("Бумага", "Бумага", group, gram)
     recipe = recipe_model("Упакованный продукт", gram, 0.8)
     recipe.add_ingredient(food, 100)
+
+    # Действие
     row = recipe.add_ingredient(packaging, 15, is_packaging=True)
+
+    # Проверка
     assert row.is_packaging is True
     assert recipe.packaging_weight == pytest.approx(15)
     assert recipe.gross_weight == pytest.approx(115)
     assert recipe.net_weight == pytest.approx(80)
+
+    # Действие
     recipe.remove_ingredient(row)
+
+    # Проверка
     assert recipe.gross_weight == pytest.approx(100)
 
 
 def test_updated_weights_recipe_item_model_nested_recipe():
-    """<summary>Два из шести изделий берут треть нетто карты; изменение сырья обновляет родителя.</summary>"""
+    """
+    <summary>
+    Два из шести изделий берут треть нетто карты; изменение сырья обновляет родителя.
+    </summary>
+    """
+    # Подготовка
     gram = unit_model("грамм")
     piece = unit_model("штука")
     group = group_model("Продукты")
@@ -53,17 +87,30 @@ def test_updated_weights_recipe_item_model_nested_recipe():
     flour_row = inner.add_ingredient(flour, 500)
     bread = recipe_item_model("Лепёшка", "Лепёшка", group, piece, inner, output_quantity=6)
     outer = recipe_model("Порция", gram, 0.8)
+
+    # Действие
     row = outer.add_ingredient(bread, 2)
-    assert row.recipe is inner
+
+    # Проверка
+    assert row.item.recipe is inner
     assert outer.gross_weight == pytest.approx(150)
     assert outer.net_weight == pytest.approx(120)
+
+    # Действие
     flour_row.quantity = 600
+
+    # Проверка
     assert outer.gross_weight == pytest.approx(180)
     assert outer.net_weight == pytest.approx(144)
 
 
 def test_calculated_weights_recipe_model_nested_packaging():
-    """<summary>Упаковка вложенного продукта не становится едой и не подвергается обработке повторно.</summary>"""
+    """
+    <summary>
+    Упаковка вложенного продукта не становится едой и не подвергается обработке повторно.
+    </summary>
+    """
+    # Подготовка
     gram = unit_model("грамм")
     piece = unit_model("штука")
     group = group_model("Продукты")
@@ -74,35 +121,69 @@ def test_calculated_weights_recipe_model_nested_packaging():
     inner.add_ingredient(paper, 10, is_packaging=True)
     portion = recipe_item_model("Порция", "Порция", group, piece, inner, output_quantity=1)
     outer = recipe_model("Набор", gram, 0.5)
+
+    # Действие
     outer.add_ingredient(portion, 2)
+
+    # Проверка
     assert outer.gross_weight == pytest.approx(180)
     assert outer.net_weight == pytest.approx(80)
     assert outer.packaging_weight == pytest.approx(20)
 
 
 def test_calculated_mass_recipe_item_model_weight_quantity():
-    """<summary>Количество весового полуфабриката задаёт готовую массу без выхода в штуках.</summary>"""
+    """
+    <summary>
+    Количество весового полуфабриката задаёт готовую массу без выхода в штуках.
+    </summary>
+    """
+    # Подготовка
     gram = unit_model("грамм")
     kilogram = unit_model("килограмм", 1000, gram)
     group = group_model("Продукты")
     inner = recipe_model("Тесто", gram)
     dough = recipe_item_model("Тесто", "Тесто", group, kilogram, inner)
-    assert dough.calculate_mass(0.2, gram) == pytest.approx(200)
-    assert dough.calculate_mass(200, kilogram, gram) == pytest.approx(0.2)
+
+    # Действие
+    result = dough.calculate_mass(0.2, gram)
+
+    # Проверка
+    assert result == pytest.approx(200)
+
+    # Действие
+    second_result = dough.calculate_mass(200, kilogram, gram)
+
+    # Проверка
+    assert second_result == pytest.approx(0.2)
 
 
 def test_arguments_exception_add_ingredient_direct_cycle():
-    """<summary>Карта не может содержать собственный продукт; состав при ошибке не меняется.</summary>"""
+    """
+    <summary>
+    Карта не может содержать собственный продукт; состав при ошибке не меняется.
+    </summary>
+    """
+    # Подготовка
     gram = unit_model("грамм")
     recipe = recipe_model("Тесто", gram)
     dough = recipe_item_model("Тесто", "Тесто", group_model("Продукты"), gram, recipe)
+
+    # Действие
     with pytest.raises(arguments_exception):
         recipe.add_ingredient(dough, 1)
+
+    # Проверка
+    # pytest.raises проверяет ожидаемый тип исключения.
     assert recipe.ingredients == ()
 
 
 def test_arguments_exception_add_ingredient_indirect_cycle():
-    """<summary>Добавление последней связи в цепочке А → Б → В → А запрещается.</summary>"""
+    """
+    <summary>
+    Добавление последней связи в цепочке А → Б → В → А запрещается.
+    </summary>
+    """
+    # Подготовка
     gram = unit_model("грамм")
     group = group_model("Продукты")
     first = recipe_model("А", gram)
@@ -113,13 +194,23 @@ def test_arguments_exception_add_ingredient_indirect_cycle():
     c = recipe_item_model("В", "В", group, gram, third)
     first.add_ingredient(b, 1)
     second.add_ingredient(c, 1)
+
+    # Действие
     with pytest.raises(arguments_exception):
         third.add_ingredient(a, 1)
+
+    # Проверка
+    # pytest.raises проверяет ожидаемый тип исключения.
     assert third.ingredients == ()
 
 
 def test_calculated_mass_recipe_model_shared_subrecipe():
-    """<summary>Общий полуфабрикат в двух ветках разрешён и учитывается в обеих.</summary>"""
+    """
+    <summary>
+    Общий полуфабрикат в двух ветках разрешён и учитывается в обеих.
+    </summary>
+    """
+    # Подготовка
     gram = unit_model("грамм")
     piece = unit_model("штука")
     group = group_model("Продукты")
@@ -132,46 +223,94 @@ def test_calculated_mass_recipe_model_shared_subrecipe():
     right.add_ingredient(base_item, 2)
     root = recipe_model("Набор", gram)
     root.add_ingredient(recipe_item_model("Левая", "Левая", group, piece, left, 1), 1)
+
+    # Действие
     root.add_ingredient(recipe_item_model("Правая", "Правая", group, piece, right, 1), 1)
+
+    # Проверка
     assert root.net_weight == pytest.approx(300)
 
 
 def test_arguments_exception_add_ingredient_duplicate_row():
-    """<summary>Повторное добавление одной строки запрещено, отдельные строки того же продукта разрешены.</summary>"""
+    """
+    <summary>
+    Повторное добавление одной строки запрещено, отдельные строки того же продукта разрешены.
+    </summary>
+    """
+    # Подготовка
     gram = unit_model("грамм")
     flour = item_model("Мука", "Мука", group_model("Продукты"), gram)
     recipe = recipe_model("Тесто", gram)
     row = recipe.add_ingredient(flour, 100)
+
+    # Действие
     with pytest.raises(arguments_exception):
         recipe.add_ingredient(row)
+
+    # Проверка
+    # pytest.raises проверяет ожидаемый тип исключения.
+
+    # Действие
     recipe.add_ingredient(flour, 50)
+
+    # Проверка
     assert recipe.net_weight == pytest.approx(150)
 
 
 def test_arguments_exception_recipe_item_model_missing_output():
-    """<summary>Штучному продукту нужен положительный выход карты в его единице учёта.</summary>"""
+    """
+    <summary>
+    Штучному продукту нужен положительный выход карты в его единице учёта.
+    </summary>
+    """
+    # Подготовка
     gram = unit_model("грамм")
     piece = unit_model("штука")
     recipe = recipe_model("Лепёшки", gram)
-    with pytest.raises(arguments_exception):
+
+    # Действие
+    with pytest.raises(arguments_exception) as error:
         recipe_item_model("Лепёшка", "Лепёшка", group_model("Продукты"), piece, recipe)
+
+    # Проверка
+    assert "Поле: output_quantity" in str(error.value)
 
 
 def test_read_only_references_recipe_model_cycle_protection():
-    """<summary>Публичная замена ссылок на продукт и карту запрещена, обход проверки циклов невозможен.</summary>"""
+    """
+    <summary>
+    Публичная замена ссылок на продукт и карту запрещена, обход проверки циклов невозможен.
+    </summary>
+    """
+    # Подготовка
     gram = unit_model("грамм")
     inner = recipe_model("Основа", gram)
     product = recipe_item_model("Основа", "Основа", group_model("Продукты"), gram, inner)
     outer = recipe_model("Блюдо", gram)
     row = outer.add_ingredient(product, 1)
+
+    # Действие
     with pytest.raises(AttributeError):
         product.recipe = outer
+
+    # Проверка
+    # pytest.raises проверяет ожидаемый тип исключения.
+
+    # Действие
     with pytest.raises(AttributeError):
         row.item = product
 
+    # Проверка
+    # pytest.raises проверяет ожидаемый тип исключения.
+
 
 def test_calculated_packaging_recipe_item_model_weight_fraction():
-    """<summary>200 г из партии с нетто 400 г получают половину её упаковки.</summary>"""
+    """
+    <summary>
+    200 г из партии с нетто 400 г получают половину её упаковки.
+    </summary>
+    """
+    # Подготовка
     gram = unit_model("грамм")
     kilogram = unit_model("килограмм", 1000, gram)
     group = group_model("Продукты")
@@ -180,14 +319,23 @@ def test_calculated_packaging_recipe_item_model_weight_fraction():
     inner.add_ingredient(item_model("Бумага", "Бумага", group, gram), 20, is_packaging=True)
     product = recipe_item_model("Продукт", "Продукт", group, kilogram, inner)
     outer = recipe_model("Порция", gram)
+
+    # Действие
     outer.add_ingredient(product, 0.2)
+
+    # Проверка
     assert outer.net_weight == pytest.approx(200)
     assert outer.packaging_weight == pytest.approx(10)
     assert outer.gross_weight == pytest.approx(210)
 
 
 def test_updated_mass_recipe_item_model_removed_inner_ingredient():
-    """<summary>Удаление последнего сырья обнуляет массу штучного продукта в родительской карте.</summary>"""
+    """
+    <summary>
+    Удаление последнего сырья обнуляет массу штучного продукта в родительской карте.
+    </summary>
+    """
+    # Подготовка
     gram = unit_model("грамм")
     piece = unit_model("штука")
     group = group_model("Продукты")
@@ -195,34 +343,67 @@ def test_updated_mass_recipe_item_model_removed_inner_ingredient():
     row = inner.add_ingredient(item_model("Мука", "Мука", group, gram), 100)
     product = recipe_item_model("Лепёшка", "Лепёшка", group, piece, inner, 1)
     outer = recipe_model("Порция", gram)
+
+    # Действие
     outer.add_ingredient(product, 2)
+
+    # Проверка
     assert outer.net_weight == pytest.approx(200)
+
+    # Действие
     inner.remove_ingredient(row)
+
+    # Проверка
     assert outer.net_weight == 0
     assert outer.gross_weight == 0
 
 
 def test_arguments_exception_recipe_item_model_zero_output():
-    """<summary>Нулевой выход партии отклоняется, предотвращая деление на ноль.</summary>"""
+    """
+    <summary>
+    Нулевой выход партии отклоняется, предотвращая деление на ноль.
+    </summary>
+    """
+    # Подготовка
     gram = unit_model("грамм")
     recipe = recipe_model("Лепёшки", gram)
-    with pytest.raises(arguments_exception):
+
+    # Действие
+    with pytest.raises(arguments_exception) as error:
         recipe_item_model("Лепёшка", "Лепёшка", group_model("Продукты"), unit_model("штука"), recipe, 0)
+
+    # Проверка
+    assert "Поле: output_quantity" in str(error.value)
 
 
 def test_preserved_quantity_recipe_ingredient_model_invalid_change():
-    """<summary>Отрицательное количество отклоняется без изменения строки и массы карты.</summary>"""
+    """
+    <summary>
+    Отрицательное количество отклоняется без изменения строки и массы карты.
+    </summary>
+    """
+    # Подготовка
     gram = unit_model("грамм")
     recipe = recipe_model("Смесь", gram)
     row = recipe.add_ingredient(item_model("Мука", "Мука", group_model("Продукты"), gram), 100)
+
+    # Действие
     with pytest.raises(arguments_exception):
         row.quantity = -1
+
+    # Проверка
+    # pytest.raises проверяет ожидаемый тип исключения.
     assert row.quantity == 100
     assert recipe.net_weight == pytest.approx(100)
 
 
 def test_updated_weights_recipe_model_added_nested_ingredient():
-    """<summary>Новый ингредиент вложенной карты изменяет брутто и нетто родителя.</summary>"""
+    """
+    <summary>
+    Новый ингредиент вложенной карты изменяет брутто и нетто родителя.
+    </summary>
+    """
+    # Подготовка
     gram = unit_model("грамм")
     piece = unit_model("штука")
     group = group_model("Бакалея")
@@ -232,9 +413,17 @@ def test_updated_weights_recipe_model_added_nested_ingredient():
     inner.add_ingredient(flour, 100)
     product = recipe_item_model("Заготовка", "Заготовка", group, piece, inner, 1)
     outer = recipe_model("Блюдо", gram, 0.8)
+
+    # Действие
     outer.add_ingredient(product, 2)
+
+    # Проверка
     assert outer.gross_weight == pytest.approx(180)
     assert outer.net_weight == pytest.approx(144)
+
+    # Действие
     inner.add_ingredient(salt, 10)
+
+    # Проверка
     assert outer.gross_weight == pytest.approx(198)
     assert outer.net_weight == pytest.approx(158.4)

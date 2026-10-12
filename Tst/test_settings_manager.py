@@ -16,8 +16,11 @@ def test_not_raise_setings_manager_load():
     # Подготовка
     manager = setting_manager()
 
-    # Действие и проверка отсутствия исключений
+    # Действие
     manager.load()
+
+    # Проверка
+    assert manager.is_loaded() is True
 
 
 def test_not_empty_setings_manager_load():

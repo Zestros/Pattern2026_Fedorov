@@ -94,8 +94,14 @@ def test_empty_collections_storage_manager_regular_start(manager):
     Подготовка хранилища считается успешной.
     </summary>
     """
+    # Подготовка
+    # Используются входные данные, указанные в параметрах или вызове ниже.
+
+    # Действие
+    result = manager.is_loaded()
+
     # Проверка
-    assert manager.is_loaded() is True
+    assert result is True
     assert manager.warehouses == ()
     assert manager.units == ()
     assert manager.items == ()
@@ -146,11 +152,15 @@ def test_arguments_exception_storage_manager_invalid_model(manager, method):
     Коллекции остаются пустыми.
     </summary>
     """
+    # Подготовка
+    # Используются входные данные, указанные в параметрах или вызове ниже.
+
     # Действие
     with pytest.raises(arguments_exception):
         getattr(manager, method)("не модель")
 
     # Проверка
+    # pytest.raises проверяет ожидаемый тип исключения.
     assert not manager.warehouses
     assert not manager.units
     assert not manager.groups
@@ -287,16 +297,19 @@ def test_filled_collections_storage_manager_first_start(settings):
     Все объекты имеют уникальные коды.
     </summary>
     """
+    # Подготовка
     settings.first_start = True
-
     manager = storage_manager(settings)
 
-    assert manager.is_loaded() is True
+    # Действие
+    result = manager.is_loaded()
+
+    # Проверка
+    assert result is True
     assert len(manager.warehouses) == 1
     assert len(manager.groups) == 1
     assert len(manager.units) == 5
     assert len(manager.items) == 6
-
     assert manager.warehouses[0].name == "Основной склад"
     assert manager.groups[0].name == "Бакалея"
     assert {item.name for item in manager.items} == {
@@ -304,6 +317,7 @@ def test_filled_collections_storage_manager_first_start(settings):
         "Тесто", "Пшеничные лепёшки",
     }
 
+    # Действие
     all_models = (
         manager.warehouses
         + manager.groups
@@ -312,6 +326,7 @@ def test_filled_collections_storage_manager_first_start(settings):
     )
     codes = [model.unique_code for model in all_models]
 
+    # Проверка
     assert all(codes)
     assert len(codes) == len(set(codes))
 
@@ -358,21 +373,27 @@ def test_created_recipes_storage_manager_first_start(settings):
     Массы соответствуют рецепту из Markdown.
     </summary>
     """
+    # Подготовка
     settings.first_start = True
     manager = storage_manager(settings)
     items = {item.name: item for item in manager.items}
-
     dough = items["Тесто"]
+
+    # Действие
     bread = items["Пшеничные лепёшки"]
 
+    # Проверка
     assert isinstance(dough, recipe_item_model)
     assert isinstance(bread, recipe_item_model)
-
     assert len(dough.recipe.ingredients) == 4
+
+    # Действие
     composition = {
         row.item.name: row.quantity
         for row in dough.recipe.ingredients
     }
+
+    # Проверка
     assert composition == {
         "Мука": 0.3,
         "Вода": 0.18,
@@ -380,24 +401,34 @@ def test_created_recipes_storage_manager_first_start(settings):
         "Соль": 0.005,
     }
 
+    # Действие
     for row in dough.recipe.ingredients:
         assert row.item is items[row.item.name]
 
+    # Проверка
     assert len(bread.recipe.ingredients) == 1
+
+    # Действие
     dough_row = bread.recipe.ingredients[0]
+
+    # Проверка
     assert dough_row.item is dough
     assert dough_row.quantity == pytest.approx(0.4985)
-
     assert dough.recipe.gross_weight == pytest.approx(498.5)
     assert dough.recipe.net_weight == pytest.approx(498.5)
-
     assert bread.output_quantity == 6
     assert bread.recipe.mass_coefficient == pytest.approx(0.9)
     assert bread.recipe.gross_weight == pytest.approx(498.5)
     assert bread.recipe.net_weight == pytest.approx(448.65)
 
+    # Действие
     gram = dough.recipe.mass_unit
-    assert bread.calculate_mass(1, gram) == pytest.approx(74.775)
+
+    # Действие
+    result = bread.calculate_mass(1, gram)
+
+    # Проверка
+    assert result == pytest.approx(74.775)
 
 
 def test_preserved_recipes_storage_manager_repeated_initialization(settings):
@@ -407,6 +438,7 @@ def test_preserved_recipes_storage_manager_repeated_initialization(settings):
     новые продукты, карты или строки рецептов.
     </summary>
     """
+    # Подготовка
     settings.first_start = True
     first = storage_manager(settings)
     previous_items = first.items
@@ -416,10 +448,12 @@ def test_preserved_recipes_storage_manager_repeated_initialization(settings):
     )
     previous_recipe = bread.recipe
     previous_row = bread.recipe.ingredients[0]
-
     second = storage_manager(settings)
+
+    # Действие
     second.convert()
 
+    # Проверка
     assert second is first
     assert len(second.items) == len(previous_items)
     assert all(
