@@ -15,6 +15,9 @@ def test_created_unit_model_default_base_unit():
     Её коэффициент равен 1, а базовая единица — сам объект.
     </summary>
     """
+    # Подготовка
+    # Используются входные данные, указанные в параметрах или вызове ниже.
+
     # Действие
     unit = unit_model("грамм")
 
@@ -33,6 +36,9 @@ def test_created_unit_model_explicit_base_coefficient():
     Наименование сохраняется без пробелов по краям.
     </summary>
     """
+    # Подготовка
+    # Используются входные данные, указанные в параметрах или вызове ниже.
+
     # Действие
     unit = unit_model("  грамм  ", 1)
 
@@ -114,11 +120,15 @@ def test_arguments_exception_unit_model_invalid_base_unit(base_unit):
     с указанием поля base_unit.
     </summary>
     """
+    # Подготовка
+    # Используются входные данные, указанные в параметрах или вызове ниже.
+
     # Действие
     with pytest.raises(arguments_exception) as error:
         unit_model("килограмм", 1000, base_unit)
 
     # Проверка
+    # pytest.raises проверяет ожидаемый тип исключения.
     assert "Поле: base_unit" in str(error.value)
 
 
@@ -151,11 +161,15 @@ def test_arguments_exception_unit_model_non_unit_base_coefficient(
     Другой коэффициент вызывает arguments_exception.
     </summary>
     """
+    # Подготовка
+    # Используются входные данные, указанные в параметрах или вызове ниже.
+
     # Действие
     with pytest.raises(arguments_exception) as error:
         unit_model("единица", coefficient)
 
     # Проверка
+    # pytest.raises проверяет ожидаемый тип исключения.
     assert "Поле: coefficient" in str(error.value)
 
 
@@ -166,11 +180,15 @@ def test_arguments_exception_unit_model_invalid_name():
     Пустое имя вызывает arguments_exception с указанием поля name.
     </summary>
     """
+    # Подготовка
+    # Используются входные данные, указанные в параметрах или вызове ниже.
+
     # Действие
     with pytest.raises(arguments_exception) as error:
         unit_model("")
 
     # Проверка
+    # pytest.raises проверяет ожидаемый тип исключения.
     assert "Поле: name" in str(error.value)
 
 
@@ -192,3 +210,90 @@ def test_converted_quantity_unit_model_kilograms_to_grams():
     # Проверка
     assert kilogram.base_unit is gram
     assert quantity_in_grams == 2000
+
+
+def test_created_kilogram_create_kilogram_default():
+    """
+    <summary>
+    Фабрика создаёт килограмм с коэффициентом пересчёта 1000.
+    Его базовая единица — грамм с коэффициентом 1 и ссылкой на себя.
+    Килограмм и грамм получают разные уникальные коды.
+    </summary>
+    """
+    # Подготовка
+    # Используются входные данные, указанные в параметрах или вызове ниже.
+
+    # Действие
+    kilogram = unit_model.create_kilogram()
+    gram = kilogram.base_unit
+
+    # Проверка
+    assert kilogram.name == "килограмм"
+    assert kilogram.coefficient == 1000
+    assert gram.name == "грамм"
+    assert gram.coefficient == 1
+    assert gram.base_unit is gram
+    assert kilogram.unique_code != gram.unique_code
+
+
+@pytest.mark.parametrize(
+    "quantity, expected",
+    [
+        (300, 0.3),
+        (1500, 1.5),
+        (0, 0),
+    ],
+)
+def test_converted_quantity_convert_to_grams_to_kilograms(
+    quantity, expected,
+):
+    """
+    <summary>
+    Граммы переводятся в килограммы.
+    Проверяются дробный результат и нулевое количество.
+    </summary>
+    """
+    # Подготовка
+    gram = unit_model("грамм")
+    kilogram = unit_model("килограмм", 1000, gram)
+
+    # Действие
+    result = gram.convert_to(quantity, kilogram)
+
+    # Проверка
+    assert result == pytest.approx(expected)
+
+
+def test_unchanged_quantity_convert_to_same_unit():
+    """
+    <summary>
+    Перевод в исходную единицу сохраняет количество.
+    </summary>
+    """
+    # Подготовка
+    gram = unit_model("грамм")
+
+    # Действие
+    result = gram.convert_to(12.5, gram)
+
+    # Проверка
+    assert result == pytest.approx(12.5)
+
+def test_arguments_exception_convert_to_incompatible_units():
+    """
+    <summary>
+    Перевод объёма в массу отклоняется:
+    у миллилитра и грамма разные базовые единицы.
+    </summary>
+    """
+    # Подготовка
+    gram = unit_model("грамм")
+    milliliter = unit_model("миллилитр")
+
+    # Действие
+    with pytest.raises(arguments_exception) as error:
+        milliliter.convert_to(100, gram)
+
+    # Проверка
+    # pytest.raises проверяет ожидаемый тип исключения.
+    assert "Поле: target_unit" in str(error.value)

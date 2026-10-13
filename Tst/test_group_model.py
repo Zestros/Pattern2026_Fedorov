@@ -24,7 +24,10 @@ def test_created_group_model_valid_name(name, expected_name):
     Модель наследуется от abstract_model и получает уникальный код.
     </summary>
     """
-    # Подготовка и действие
+    # Подготовка
+    # Используются входные данные, указанные в параметрах или вызове ниже.
+
+    # Действие
     group = group_model(name)
 
     # Проверка
@@ -45,11 +48,15 @@ def test_arguments_exception_group_model_invalid_name(name):
     наименованием вызывает внутреннее исключение проекта.
     </summary>
     """
+    # Подготовка
+    # Используются входные данные, указанные в параметрах или вызове ниже.
+
     # Действие
     with pytest.raises(arguments_exception) as error:
         group_model(name)
 
     # Проверка
+    # pytest.raises проверяет ожидаемый тип исключения.
     assert "Поле: name" in str(error.value)
 
 
