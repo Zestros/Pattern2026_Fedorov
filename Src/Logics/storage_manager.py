@@ -1,3 +1,6 @@
+from Src.Core.entity_type_enum import entity_type_enum
+from Src.Core.entity_model import entity_model
+from Src.Core.validator import validator
 from Src.Core.abstract_manager import abstract_manager
 from Src.Core.exception import arguments_exception
 from Src.Core.validator import operation_exception
@@ -86,6 +89,11 @@ class storage_manager(abstract_manager):
 
                 dough = recipe_item_model.create_dough(group, kilogram, liter)
                 bread = recipe_item_model.create_flatbreads(dough, piece)
+                cake = recipe_item_model.create_cake(
+                    group,
+                    gram,
+                    piece,
+                )
 
                 groups.append(group)
                 warehouses.append(warehouse)
@@ -93,6 +101,7 @@ class storage_manager(abstract_manager):
                 # Регистрируем те же продукты, на которые ссылается карта.
                 items.extend(row.item for row in dough.recipe.ingredients)
                 items.extend([dough, bread])
+                items.append(cake)
 
             self.__warehouses = warehouses
             self.__units = units
@@ -169,7 +178,20 @@ class storage_manager(abstract_manager):
 
         self.__add_model(value, item_model, self.__items)
 
-
-
-
-    
+    def find(self, entity_type: entity_type_enum, code: str) -> entity_model | None:
+        """Находит объект по собственному коду; отсутствие возвращает None."""
+        validator.validate(entity_type, entity_type_enum, field="entity_type")
+        validator.validate(code, str, field="code")
+        collections = {
+            entity_type_enum.ITEM: self.items,
+            entity_type_enum.UNIT: self.units,
+            entity_type_enum.RECIPE: tuple(
+                item.recipe for item in self.items
+                if isinstance(item, recipe_item_model)
+            ),
+        }
+        return next(
+            (model for model in collections[entity_type]
+             if model.unique_code == code.strip()),
+            None,
+        )

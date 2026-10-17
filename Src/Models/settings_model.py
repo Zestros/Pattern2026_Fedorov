@@ -1,3 +1,4 @@
+from Src.Core.report_type_enum import report_type_enum
 from Src.Core.abstract_model import abstract_model
 from Src.Models.company_model import company_model
 from Src.Core.validator import validator
@@ -47,3 +48,16 @@ class settings_model(abstract_model):
     def first_start(self, value: bool) -> None:
         validator.validate(value, bool, field="first_start")
         self.__first_start = value
+
+    __response_format: report_type_enum = report_type_enum.TXT
+
+    @property
+    def response_format(self) -> report_type_enum:
+        """Возвращает формат отчёта по умолчанию."""
+        return self.__response_format
+
+    @response_format.setter
+    def response_format(self, value: report_type_enum) -> None:
+        """Устанавливает поддерживаемый формат отчёта."""
+        validator.validate(value, report_type_enum, field="response_format")
+        self.__response_format = value
