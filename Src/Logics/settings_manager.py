@@ -1,3 +1,4 @@
+from Src.Core.report_type_enum import report_type_enum
 from Src.Core.abstract_manager import abstract_manager
 import json
 from Src.Core.validator import validator, operation_exception
@@ -55,6 +56,16 @@ class setting_manager(abstract_manager):
             settings.boss_name = data["boss_name"]
             settings.account_name = data["account_name"]
             settings.first_start = data["first_start"]
+
+            raw_format = data.get("response_format", "TXT")
+            if not isinstance(raw_format, str):
+                raise operation_exception("response_format должен быть строкой")
+            try:
+                settings.response_format = report_type_enum[raw_format.strip().upper()]
+            except KeyError as error:
+                raise operation_exception(
+                    f"Неизвестный response_format: {raw_format}"
+                ) from error
 
             self.__settings = settings
             return True

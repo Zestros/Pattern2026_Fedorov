@@ -309,12 +309,12 @@ def test_filled_collections_storage_manager_first_start(settings):
     assert len(manager.warehouses) == 1
     assert len(manager.groups) == 1
     assert len(manager.units) == 5
-    assert len(manager.items) == 6
+    assert len(manager.items) == 7
     assert manager.warehouses[0].name == "Основной склад"
     assert manager.groups[0].name == "Бакалея"
     assert {item.name for item in manager.items} == {
         "Мука", "Вода", "Масло", "Соль",
-        "Тесто", "Пшеничные лепёшки",
+        "Тесто", "Пшеничные лепёшки", "Бисквитный торт",
     }
 
     # Действие

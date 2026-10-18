@@ -12,3 +12,11 @@
 Технологии: Python, SQLite, HTML, JavaScript.
 
 Проект находится на начальном этапе разработки.
+
+## Отчёты REST API
+
+Запуск из корня проекта: `.venv/bin/python main.py`, порт 8000.
+
+- `GET /api/entities/item` — коды номенклатуры; также доступны `unit` и `recipe`.
+- `GET /api/reports/{entity_type}/{code}?format=XML` — явный формат.
+- `GET /api/reports/{entity_type}/{code}/default` — формат `response_format` из settings.json.
