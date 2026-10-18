@@ -43,13 +43,13 @@ def test_correct_fields_build_entity(storage, kind):
         assert fields["Единица измерения"] == entity.unit.name
         assert data.rows == ()
     elif kind == "UNIT":
-        assert fields["Коэффициент"] == entity.coefficient
+        assert fields["Коэффициент"] == str(entity.coefficient)
         assert fields["Код базовой единицы"] == entity.base_unit.unique_code
         assert data.rows == ()
     else:
         assert fields["Единица массы"] == entity.mass_unit.name
-        assert fields["Брутто"] == pytest.approx(498.5)
-        assert fields["Нетто"] == pytest.approx(498.5)
+        assert fields["Брутто"] == "498.5"
+        assert fields["Нетто"] == "498.5"
         assert len(data.rows) == 4
         assert [row[1] for row in data.rows] == ["Мука", "Вода", "Масло", "Соль"]
 

@@ -17,5 +17,20 @@ class text_report(abstract_report):
             lines.append(" | ".join(data.columns))
         lines.extend(" | ".join(format_report_value(value) for value in row) for row in data.rows)
         return report_result_dto(
-            "\n".join(lines), "text/plain", "txt", download=False,
+            "\n".join(lines), self.media_type, self.file_extension, download=self.download,
         )
+
+    @property
+    def media_type(self) -> str:
+        """Возвращает MIME-тип формата."""
+        return 'text/plain'
+
+    @property
+    def file_extension(self) -> str:
+        """Возвращает расширение формата."""
+        return 'txt'
+
+    @property
+    def download(self) -> bool:
+        """Возвращает способ выдачи формата."""
+        return False

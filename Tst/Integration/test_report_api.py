@@ -10,8 +10,8 @@ from Src.Models.recipe_item_model import recipe_item_model
 def test_correct_response_get_explicit_format(kind, format_):
     """<summary>Все типы сущностей доступны во всех форматах с правильной выдачей.</summary>"""
     # Подготовка
-    entity = {'item': main.storage.items[0], 'unit': main.storage.units[0],
-              'recipe': next(x.recipe for x in main.storage.items if isinstance(x, recipe_item_model))}[kind]
+    entity = {'item': main.api.app.extensions["report_storage"].items[0], 'unit': main.api.app.extensions["report_storage"].units[0],
+              'recipe': next(x.recipe for x in main.api.app.extensions["report_storage"].items if isinstance(x, recipe_item_model))}[kind]
     client = main.api.app.test_client()
     # Действие
     response = client.get(f'/api/reports/{kind}/{entity.unique_code}?format={format_.name}')
@@ -25,10 +25,10 @@ def test_correct_response_get_explicit_format(kind, format_):
 def test_default_format_get_settings(monkeypatch):
     """<summary>Маршрут default выбирает Markdown из настроек и отдаёт файл.</summary>"""
     # Подготовка
-    monkeypatch.setattr(main.settings.settings, 'response_format', report_type_enum.MARKDOWN)
+    monkeypatch.setattr(main.api.app.extensions["report_settings"].settings, 'response_format', report_type_enum.MARKDOWN)
     client = main.api.app.test_client()
     # Действие
-    response = client.get(f'/api/reports/unit/{main.storage.units[0].unique_code}/default')
+    response = client.get(f'/api/reports/unit/{main.api.app.extensions["report_storage"].units[0].unique_code}/default')
     # Проверка
     assert response.status_code == 200
     assert response.mimetype == 'text/markdown'

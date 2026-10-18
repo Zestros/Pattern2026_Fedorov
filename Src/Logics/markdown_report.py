@@ -35,5 +35,20 @@ class markdown_report(abstract_report):
                 for row in data.rows
             )
         return report_result_dto(
-            ("\n".join(lines)).encode("utf-8"), "text/markdown", "md", download=True,
+            ("\n".join(lines)).encode("utf-8"), self.media_type, self.file_extension, download=self.download,
         )
+
+    @property
+    def media_type(self) -> str:
+        """Возвращает MIME-тип формата."""
+        return 'text/markdown'
+
+    @property
+    def file_extension(self) -> str:
+        """Возвращает расширение формата."""
+        return 'md'
+
+    @property
+    def download(self) -> bool:
+        """Возвращает способ выдачи формата."""
+        return True

@@ -28,5 +28,20 @@ class html_report(abstract_report):
             parts.append("</tbody></table>")
         parts.append("</body></html>")
         return report_result_dto(
-            "".join(parts), "text/html", "html", download=False,
+            "".join(parts), self.media_type, self.file_extension, download=self.download,
         )
+
+    @property
+    def media_type(self) -> str:
+        """Возвращает MIME-тип формата."""
+        return 'text/html'
+
+    @property
+    def file_extension(self) -> str:
+        """Возвращает расширение формата."""
+        return 'html'
+
+    @property
+    def download(self) -> bool:
+        """Возвращает способ выдачи формата."""
+        return False

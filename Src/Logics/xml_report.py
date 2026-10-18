@@ -27,5 +27,20 @@ class xml_report(abstract_report):
             for value in values:
                 SubElement(row, "cell").text = format_report_value(value)
         return report_result_dto(
-            tostring(root, encoding="unicode"), "application/xml", "xml", download=False,
+            tostring(root, encoding="unicode"), self.media_type, self.file_extension, download=self.download,
         )
+
+    @property
+    def media_type(self) -> str:
+        """Возвращает MIME-тип формата."""
+        return 'application/xml'
+
+    @property
+    def file_extension(self) -> str:
+        """Возвращает расширение формата."""
+        return 'xml'
+
+    @property
+    def download(self) -> bool:
+        """Возвращает способ выдачи формата."""
+        return False
