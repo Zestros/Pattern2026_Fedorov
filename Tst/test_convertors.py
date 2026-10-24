@@ -9,7 +9,6 @@ from Src.Core.abstract_convertor import abstract_convertor
 from Src.Dtos.conversion_context_dto import conversion_context_dto
 from Src.Core.exception import arguments_exception
 from Src.Logics.basic_convertor import basic_convertor
-from Src.Logics.convert_factory import convert_factory
 from Src.Logics.datetime_convertor import datetime_convertor
 from Src.Logics.reference_convertor import reference_convertor
 from Src.Models.group_model import group_model
@@ -96,7 +95,7 @@ def test_inherited_fields_reference_convertor_convert_group():
     """<summary>Свойства базовых классов группы раскрываются под публичными именами.</summary>"""
     # Подготовка
     group = group_model("Бакалея")
-    convertor = reference_convertor(convert_factory())
+    convertor = reference_convertor()
 
     # Действие
     result = convertor.convert(group, "group")
@@ -111,14 +110,50 @@ def test_public_fields_reference_convertor_convert_instance_attributes():
     """<summary>Обычные атрибуты экземпляра читаются, приватные поля и функции исключаются.</summary>"""
     # Подготовка
     source = SimpleNamespace(name="Мука", quantity=2, _secret="hidden", run=lambda: 1)
-    factory = convert_factory()
+    convertor = reference_convertor()
 
     # Действие
-    result = factory.convert(source)
+    result = convertor.convert(source)
 
     # Проверка
     assert result == {
         "value": {"name": "Мука", "quantity": 2},
+    }
+
+
+def test_nested_values_reference_convertor_convert_without_factory():
+    """
+    <summary>
+    Конвертор без фабрики обрабатывает простые поля, дату, доменную модель,
+    список, tuple и словарь внутри одного объекта, сохраняя их структуру.
+    </summary>
+    """
+    # Подготовка
+    group = group_model.create_grocery()
+    created_at = datetime(2026, 10, 22, 18, 30, tzinfo=timezone(timedelta(hours=8)))
+    source = SimpleNamespace(
+        name="Мука", quantity=2, created_at=created_at, group=group,
+        rows=[group, {"created_at": created_at, "quantity": 0}],
+        details={"values": (False, None, "")},
+    )
+    convertor = reference_convertor()
+    expected_group = {"name": "Бакалея", "unique_code": group.unique_code}
+
+    # Действие
+    result = convertor.convert(source)
+
+    # Проверка
+    assert result == {
+        "value": {
+            "name": "Мука", "quantity": 2,
+            "created_at": "2026-10-22T18:30:00+08:00",
+            "group": expected_group,
+            "rows": [
+                expected_group,
+                {"created_at": "2026-10-22T18:30:00+08:00", "quantity": 0},
+            ],
+            "details": {"values": [False, None, ""]},
+        },
     }
 
 
@@ -167,11 +202,11 @@ def test_clean_context_reference_convertor_convert_when_getter_fails():
 
     source = failing_source()
     context = conversion_context_dto()
-    factory = convert_factory()
+    convertor = reference_convertor()
 
     # Действие
     with pytest.raises(RuntimeError, match="Ошибка чтения"):
-        factory.convert(source, context=context)
+        convertor.convert(source, context=context)
 
     # Проверка
     assert context.active_ids == set()
@@ -187,7 +222,7 @@ def test_clean_context_reference_convertor_convert_when_getter_fails():
 def test_arguments_exception_abstract_convertor_convert_non_string_field(convertor_type, source):
     """<summary>Общая проверка отвергает нестроковое имя поля у всех конверторов.</summary>"""
     # Подготовка
-    convertor = convertor_type(convert_factory())
+    convertor = convertor_type()
 
     # Действие
     with pytest.raises(arguments_exception) as error:

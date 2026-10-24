@@ -6,7 +6,7 @@
             "full_name": "Бисквитный торт со сметанным кремом",
             "group": {
                 "name": "Бакалея",
-                "unique_code": "00000000000000000000000000000005"
+                "unique_code": "88edbf873bb8437ab75595d46c8845d1"
             },
             "mass_ratio": null,
             "name": "Бисквитный торт",
@@ -20,7 +20,7 @@
                             "full_name": "Бисквитный корж для торта",
                             "group": {
                                 "name": "Бакалея",
-                                "unique_code": "00000000000000000000000000000005"
+                                "unique_code": "88edbf873bb8437ab75595d46c8845d1"
                             },
                             "mass_ratio": null,
                             "name": "Бисквитный корж",
@@ -34,22 +34,20 @@
                                             "full_name": "Мука пшеничная",
                                             "group": {
                                                 "name": "Бакалея",
-                                                "unique_code": "00000000000000000000000000000005"
+                                                "unique_code": "88edbf873bb8437ab75595d46c8845d1"
                                             },
                                             "mass_ratio": null,
                                             "name": "Мука",
-                                            "unique_code": "00000000000000000000000000000013",
+                                            "unique_code": "1302c5c1bd0942149c3efef0613f8765",
                                             "unit": {
-                                                "base_unit": {
-                                                    "unique_code": "00000000000000000000000000000001"
-                                                },
+                                                "base_unit": null,
                                                 "coefficient": 1,
                                                 "name": "грамм",
-                                                "unique_code": "00000000000000000000000000000001"
+                                                "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
                                             }
                                         },
                                         "quantity": 200.0,
-                                        "unique_code": "0000000000000000000000000000000e"
+                                        "unique_code": "b1ff794df93a4668ab4c79ed18843f77"
                                     },
                                     {
                                         "is_packaging": false,
@@ -57,22 +55,20 @@
                                             "full_name": "Сахар белый",
                                             "group": {
                                                 "name": "Бакалея",
-                                                "unique_code": "00000000000000000000000000000005"
+                                                "unique_code": "88edbf873bb8437ab75595d46c8845d1"
                                             },
                                             "mass_ratio": null,
                                             "name": "Сахар",
-                                            "unique_code": "00000000000000000000000000000014",
+                                            "unique_code": "4832361b63be48c896960a06b46fa2d6",
                                             "unit": {
-                                                "base_unit": {
-                                                    "unique_code": "00000000000000000000000000000001"
-                                                },
+                                                "base_unit": null,
                                                 "coefficient": 1,
                                                 "name": "грамм",
-                                                "unique_code": "00000000000000000000000000000001"
+                                                "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
                                             }
                                         },
                                         "quantity": 150.0,
-                                        "unique_code": "0000000000000000000000000000000f"
+                                        "unique_code": "05d7d1fc4a2d4526b6238a33763bcac9"
                                     },
                                     {
                                         "is_packaging": false,
@@ -80,50 +76,44 @@
                                             "full_name": "Яйцо без скорлупы",
                                             "group": {
                                                 "name": "Бакалея",
-                                                "unique_code": "00000000000000000000000000000005"
+                                                "unique_code": "88edbf873bb8437ab75595d46c8845d1"
                                             },
                                             "mass_ratio": null,
                                             "name": "Яйцо",
-                                            "unique_code": "00000000000000000000000000000015",
+                                            "unique_code": "5c43b92d4b3949c1ba0d79e416beddf8",
                                             "unit": {
-                                                "base_unit": {
-                                                    "unique_code": "00000000000000000000000000000001"
-                                                },
+                                                "base_unit": null,
                                                 "coefficient": 1,
                                                 "name": "грамм",
-                                                "unique_code": "00000000000000000000000000000001"
+                                                "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
                                             }
                                         },
                                         "quantity": 250.0,
-                                        "unique_code": "00000000000000000000000000000010"
+                                        "unique_code": "8f4e6bcbcbd94f5aae271cf716d7f9b0"
                                     }
                                 ],
                                 "mass_coefficient": 0.9,
                                 "mass_unit": {
-                                    "base_unit": {
-                                        "unique_code": "00000000000000000000000000000001"
-                                    },
+                                    "base_unit": null,
                                     "coefficient": 1,
                                     "name": "грамм",
-                                    "unique_code": "00000000000000000000000000000001"
+                                    "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
                                 },
                                 "name": "Бисквитные коржи",
                                 "net_weight": 540.0,
                                 "packaging_weight": 0.0,
-                                "unique_code": "0000000000000000000000000000000b"
+                                "unique_code": "ab89bbaf0c2f4496b2cf71f4ebf180ca"
                             },
-                            "unique_code": "0000000000000000000000000000000a",
+                            "unique_code": "7b05f59cd7ce46fea7657e06269506b3",
                             "unit": {
-                                "base_unit": {
-                                    "unique_code": "00000000000000000000000000000004"
-                                },
+                                "base_unit": null,
                                 "coefficient": 1,
                                 "name": "штука",
-                                "unique_code": "00000000000000000000000000000004"
+                                "unique_code": "18b126351bd949a0bfa0c6d87facb53a"
                             }
                         },
                         "quantity": 3,
-                        "unique_code": "00000000000000000000000000000008"
+                        "unique_code": "0f9cde4c40174125bdac6d213bb56287"
                     },
                     {
                         "is_packaging": false,
@@ -131,7 +121,7 @@
                             "full_name": "Порция сметанного крема для торта",
                             "group": {
                                 "name": "Бакалея",
-                                "unique_code": "00000000000000000000000000000005"
+                                "unique_code": "88edbf873bb8437ab75595d46c8845d1"
                             },
                             "mass_ratio": null,
                             "name": "Порция крема",
@@ -145,22 +135,20 @@
                                             "full_name": "Сметана для крема",
                                             "group": {
                                                 "name": "Бакалея",
-                                                "unique_code": "00000000000000000000000000000005"
+                                                "unique_code": "88edbf873bb8437ab75595d46c8845d1"
                                             },
                                             "mass_ratio": null,
                                             "name": "Сметана",
-                                            "unique_code": "00000000000000000000000000000016",
+                                            "unique_code": "91641c46132b471cafbd361e86eb09cc",
                                             "unit": {
-                                                "base_unit": {
-                                                    "unique_code": "00000000000000000000000000000001"
-                                                },
+                                                "base_unit": null,
                                                 "coefficient": 1,
                                                 "name": "грамм",
-                                                "unique_code": "00000000000000000000000000000001"
+                                                "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
                                             }
                                         },
                                         "quantity": 300.0,
-                                        "unique_code": "00000000000000000000000000000011"
+                                        "unique_code": "985df723a27a4dcdbe7ed064b8a476dd"
                                     },
                                     {
                                         "is_packaging": false,
@@ -168,110 +156,94 @@
                                             "full_name": "Сахар белый",
                                             "group": {
                                                 "name": "Бакалея",
-                                                "unique_code": "00000000000000000000000000000005"
+                                                "unique_code": "88edbf873bb8437ab75595d46c8845d1"
                                             },
                                             "mass_ratio": null,
                                             "name": "Сахар",
-                                            "unique_code": "00000000000000000000000000000014",
+                                            "unique_code": "4832361b63be48c896960a06b46fa2d6",
                                             "unit": {
-                                                "base_unit": {
-                                                    "unique_code": "00000000000000000000000000000001"
-                                                },
+                                                "base_unit": null,
                                                 "coefficient": 1,
                                                 "name": "грамм",
-                                                "unique_code": "00000000000000000000000000000001"
+                                                "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
                                             }
                                         },
                                         "quantity": 100.0,
-                                        "unique_code": "00000000000000000000000000000012"
+                                        "unique_code": "b1675b241d0e4a328237b0d01dc63bf5"
                                     }
                                 ],
                                 "mass_coefficient": 1,
                                 "mass_unit": {
-                                    "base_unit": {
-                                        "unique_code": "00000000000000000000000000000001"
-                                    },
+                                    "base_unit": null,
                                     "coefficient": 1,
                                     "name": "грамм",
-                                    "unique_code": "00000000000000000000000000000001"
+                                    "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
                                 },
                                 "name": "Сметанный крем",
                                 "net_weight": 400.0,
                                 "packaging_weight": 0.0,
-                                "unique_code": "0000000000000000000000000000000d"
+                                "unique_code": "7d276fd38e4e4a73b97e170bf7fa3295"
                             },
-                            "unique_code": "0000000000000000000000000000000c",
+                            "unique_code": "e5fa7f5a716b46d2b81f4b598bea650c",
                             "unit": {
-                                "base_unit": {
-                                    "unique_code": "00000000000000000000000000000004"
-                                },
+                                "base_unit": null,
                                 "coefficient": 1,
                                 "name": "штука",
-                                "unique_code": "00000000000000000000000000000004"
+                                "unique_code": "18b126351bd949a0bfa0c6d87facb53a"
                             }
                         },
                         "quantity": 1,
-                        "unique_code": "00000000000000000000000000000009"
+                        "unique_code": "154b88c0a7154dccaa381ebec3ffbb45"
                     }
                 ],
                 "mass_coefficient": 1,
                 "mass_unit": {
-                    "base_unit": {
-                        "unique_code": "00000000000000000000000000000001"
-                    },
+                    "base_unit": null,
                     "coefficient": 1,
                     "name": "грамм",
-                    "unique_code": "00000000000000000000000000000001"
+                    "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
                 },
                 "name": "Сборка бисквитного торта",
                 "net_weight": 805.0,
                 "packaging_weight": 0.0,
-                "unique_code": "00000000000000000000000000000007"
+                "unique_code": "86a76c722a184ce0a35e4af28b11c4a7"
             },
-            "unique_code": "00000000000000000000000000000006",
+            "unique_code": "0a67c12f1a8b4a368031a35f787d4d22",
             "unit": {
-                "base_unit": {
-                    "unique_code": "00000000000000000000000000000004"
-                },
+                "base_unit": null,
                 "coefficient": 1,
                 "name": "штука",
-                "unique_code": "00000000000000000000000000000004"
+                "unique_code": "18b126351bd949a0bfa0c6d87facb53a"
             }
         },
         "units": [
             {
-                "base_unit": {
-                    "unique_code": "00000000000000000000000000000001"
-                },
+                "base_unit": null,
                 "coefficient": 1,
                 "name": "грамм",
-                "unique_code": "00000000000000000000000000000001"
+                "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
             },
             {
                 "base_unit": {
-                    "base_unit": {
-                        "unique_code": "00000000000000000000000000000001"
-                    },
+                    "base_unit": null,
                     "coefficient": 1,
                     "name": "грамм",
-                    "unique_code": "00000000000000000000000000000001"
+                    "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
                 },
                 "coefficient": 1000,
                 "name": "килограмм",
-                "unique_code": "00000000000000000000000000000002"
+                "unique_code": "74f2242af2dc4e1b81cad36dbed650aa"
             },
             {
                 "base_unit": {
-                    "base_unit": {
-                        "unique_code": "00000000000000000000000000000001"
-                    },
+                    "base_unit": null,
                     "coefficient": 1,
                     "name": "грамм",
-                    "unique_code": "00000000000000000000000000000001"
+                    "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
                 },
                 "coefficient": 0.001,
                 "name": "миллиграмм",
-                "unique_code": "00000000000000000000000000000003"
+                "unique_code": "c758fc241a0b4044a491467dd62a4429"
             }
         ]
     }

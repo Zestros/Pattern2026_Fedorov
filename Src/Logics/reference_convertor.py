@@ -3,10 +3,17 @@ from types import ModuleType
 
 from Src.Core.abstract_convertor import abstract_convertor
 from Src.Dtos.conversion_context_dto import conversion_context_dto
+from Src.Logics.basic_convertor import basic_convertor
+from Src.Logics.datetime_convertor import datetime_convertor
 
 
 class reference_convertor(abstract_convertor):
-    """Раскрывает поля объектов и коллекции через общий механизм конвертации."""
+    """Преобразует поля моделей и коллекций, используя конверторы значений."""
+
+    def __init__(self) -> None:
+        """Создаёт обработчики простых значений и даты для полей объекта."""
+        self.__basic_convertor = basic_convertor()
+        self.__datetime_convertor = datetime_convertor()
 
     @staticmethod
     def can_convert(source: object) -> bool:
@@ -63,3 +70,15 @@ class reference_convertor(abstract_convertor):
             name: self._convert_nested(getattr(source, name), name, context)
             for name in self._get_fields(source)
         }
+
+    def _convert_nested(
+        self, source: object, field_name: str, context: conversion_context_dto,
+    ) -> object:
+        """Обрабатывает простое поле, дату либо рекурсивно составное значение."""
+        if self.__basic_convertor.can_convert(source):
+            convertor = self.__basic_convertor
+        elif self.__datetime_convertor.can_convert(source):
+            convertor = self.__datetime_convertor
+        else:
+            convertor = self
+        return convertor.convert(source, field_name, context)[field_name]

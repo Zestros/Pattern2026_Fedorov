@@ -40,7 +40,28 @@ def test_selected_convertor_convert_factory_create_supported_type(source, expect
     assert isinstance(result, expected_type)
 
 
-def test_nested_structure_convert_factory_convert_mixed_containers():
+def test_not_read_properties_convert_factory_create_model():
+    """<summary>Фабрика только выбирает конвертор и не читает значения свойств модели.</summary>"""
+    # Подготовка
+    class source_model:
+        """Объект со свойством, которое нельзя читать при выборе конвертора."""
+
+        @property
+        def quantity(self):
+            """Вызывает ошибку при преждевременном чтении значения."""
+            raise RuntimeError("Значение должен читать конвертор")
+
+    source = source_model()
+    factory = convert_factory()
+
+    # Действие
+    result = factory.create(source)
+
+    # Проверка
+    assert isinstance(result, reference_convertor)
+
+
+def test_nested_structure_reference_convertor_convert_mixed_containers():
     """<summary>Словари сохраняют ключи, tuple становится списком, все элементы преобразуются.</summary>"""
     # Подготовка
     source = {
@@ -54,7 +75,7 @@ def test_nested_structure_convert_factory_convert_mixed_containers():
     factory = convert_factory()
 
     # Действие
-    result = factory.convert(source)
+    result = factory.create(source).convert(source)
 
     # Проверка
     assert result == {
@@ -66,40 +87,41 @@ def test_nested_structure_convert_factory_convert_mixed_containers():
     }
 
 
-def test_code_reference_convert_factory_convert_base_unit_self_cycle():
-    """<summary>Самоссылка базового грамма заменяется кодом; остальные поля сохраняются.</summary>"""
+def test_null_base_convert_factory_create_base_unit_self_cycle():
+    """<summary>Самоссылка базового грамма становится None; остальные поля сохраняются.</summary>"""
     # Подготовка
     gram = unit_model("грамм")
     factory = convert_factory()
 
     # Действие
-    result = factory.convert(gram, "unit")
+    result = factory.create(gram).convert(gram, "unit")
 
     # Проверка
     assert result == {
         "unit": {
             "name": "грамм", "coefficient": 1,
             "unique_code": gram.unique_code,
-            "base_unit": {"unique_code": gram.unique_code},
+            "base_unit": None,
         },
     }
 
 
-def test_full_shared_base_convert_factory_convert_units_in_separate_branches():
+def test_full_shared_base_reference_convertor_convert_units_in_separate_branches():
     """<summary>Килограмм и миллиграмм полностью раскрывают один заранее созданный грамм.</summary>"""
     # Подготовка
     gram = unit_model("грамм")
     kilogram = unit_model("килограмм", 1000, gram)
     milligram = unit_model("миллиграмм", 0.001, gram)
+    units = [kilogram, milligram]
 
     factory = convert_factory()
     expected_gram = {
         "name": "грамм", "coefficient": 1, "unique_code": gram.unique_code,
-        "base_unit": {"unique_code": gram.unique_code},
+        "base_unit": None,
     }
 
     # Действие
-    result = factory.convert([kilogram, milligram])["value"]
+    result = factory.create(units).convert(units)["value"]
 
     # Проверка
     assert result[0]["base_unit"] == expected_gram
@@ -109,7 +131,7 @@ def test_full_shared_base_convert_factory_convert_units_in_separate_branches():
     assert kilogram.base_unit is gram and milligram.base_unit is gram
 
 
-def test_nested_recipe_convert_factory_convert_all_rows_and_computed_fields():
+def test_nested_recipe_reference_convertor_convert_all_rows_and_computed_fields():
     """<summary>Рецепт сохраняет обе строки, общую группу, простые поля и расчётные массы.</summary>"""
     # Подготовка
     gram = unit_model("грамм")
@@ -123,7 +145,7 @@ def test_nested_recipe_convert_factory_convert_all_rows_and_computed_fields():
     factory = convert_factory()
 
     # Действие
-    result = factory.convert(recipe, "recipe")["recipe"]
+    result = factory.create(recipe).convert(recipe, "recipe")["recipe"]
 
     # Проверка
     assert result["name"] == "Тесто"
@@ -145,13 +167,13 @@ def test_nested_recipe_convert_factory_convert_all_rows_and_computed_fields():
         assert row["item"]["unit"]["name"] == "грамм"
 
 
-def test_nested_cake_convert_factory_convert_complex_recipe_with_shared_objects():
+def test_nested_cake_reference_convertor_convert_complex_recipe_with_shared_objects():
     """
     <summary>
     Торт с рецептами коржей и крема преобразуется вместе с датой и справочником
     единиц. Все строки, количества и расчётные массы сохраняются. Общие сахар,
     группа и грамм раскрываются в независимых ветках, самоссылка грамма
-    заменяется кодом. Контекст очищается после завершения операции.
+    становится None. Контекст очищается после завершения операции.
     </summary>
     """
     # Подготовка
@@ -173,12 +195,12 @@ def test_nested_cake_convert_factory_convert_complex_recipe_with_shared_objects(
     context = conversion_context_dto()
     expected_gram = {
         "name": "грамм", "coefficient": 1, "unique_code": gram.unique_code,
-        "base_unit": {"unique_code": gram.unique_code},
+        "base_unit": None,
     }
     expected_group = {"name": "Бакалея", "unique_code": group.unique_code}
 
     # Действие
-    result = factory.convert(source, "example", context)
+    result = factory.create(source).convert(source, "example", context)
 
     # Проверка
     example = result["example"]
@@ -229,8 +251,8 @@ def test_nested_cake_convert_factory_convert_complex_recipe_with_shared_objects(
     assert context.path == []
 
 
-def test_code_reference_convert_factory_convert_indirect_model_cycle():
-    """<summary>Цикл из двух доменных экземпляров завершается ссылкой на первый код.</summary>"""
+def test_null_reference_convert_factory_create_indirect_model_cycle():
+    """<summary>Цикл из двух доменных экземпляров завершается значением None.</summary>"""
     # Подготовка
     first = abstract_model()
     second = abstract_model()
@@ -240,14 +262,14 @@ def test_code_reference_convert_factory_convert_indirect_model_cycle():
     factory = convert_factory()
 
     # Действие
-    result = factory.convert(first)["value"]
+    result = factory.create(first).convert(first)["value"]
 
     # Проверка
     assert result["link"]["unique_code"] == second.unique_code
-    assert result["link"]["link"] == {"unique_code": first.unique_code}
+    assert result["link"]["link"] is None
 
 
-def test_identity_tracking_convert_factory_convert_distinct_models_with_equal_codes():
+def test_identity_tracking_reference_convertor_convert_distinct_models_with_equal_codes():
     """<summary>Разные экземпляры с одинаковым unique_code не принимаются за цикл.</summary>"""
     # Подготовка
     first = abstract_model()
@@ -258,7 +280,7 @@ def test_identity_tracking_convert_factory_convert_distinct_models_with_equal_co
     factory = convert_factory()
 
     # Действие
-    result = factory.convert(first)["value"]["link"]
+    result = factory.create(first).convert(first)["value"]["link"]
 
     # Проверка
     assert result == {
@@ -267,7 +289,7 @@ def test_identity_tracking_convert_factory_convert_distinct_models_with_equal_co
 
 
 @pytest.mark.parametrize("kind", ["list", "dict", "object", "mixed"])
-def test_arguments_exception_convert_factory_convert_cycle_without_code(kind):
+def test_arguments_exception_reference_convertor_convert_cycle_without_code(kind):
     """<summary>Циклы коллекций и обычных объектов дают ошибку с путём и очищают контекст.</summary>"""
     # Подготовка
     if kind == "list":
@@ -291,7 +313,7 @@ def test_arguments_exception_convert_factory_convert_cycle_without_code(kind):
 
     # Действие
     with pytest.raises(arguments_exception) as error:
-        factory.convert(source, "root", context)
+        factory.create(source).convert(source, "root", context)
 
     # Проверка
     assert expected_path in str(error.value)
@@ -300,7 +322,7 @@ def test_arguments_exception_convert_factory_convert_cycle_without_code(kind):
     assert context.path == []
 
 
-def test_repeated_collection_convert_factory_convert_shared_list():
+def test_repeated_collection_reference_convertor_convert_shared_list():
     """<summary>Одна коллекция полностью преобразуется в двух независимых ветках.</summary>"""
     # Подготовка
     shared = [1, {"name": "Мука"}]
@@ -309,7 +331,7 @@ def test_repeated_collection_convert_factory_convert_shared_list():
     factory = convert_factory()
 
     # Действие
-    result = factory.convert(source)
+    result = factory.create(source).convert(source)
 
     # Проверка
     assert result == {
@@ -318,38 +340,44 @@ def test_repeated_collection_convert_factory_convert_shared_list():
 
 
 @pytest.mark.parametrize("source", [b"data", {1, 2}, object()])
-def test_arguments_exception_convert_factory_convert_unsupported_type(source):
+def test_arguments_exception_reference_convertor_convert_unsupported_type(source):
     """<summary>Неподдерживаемые типы отклоняются вместо потери исходных данных.</summary>"""
     # Подготовка
     factory = convert_factory()
 
     # Действие
     with pytest.raises(arguments_exception) as error:
-        factory.convert(source)
+        factory.create(source).convert(source)
 
     # Проверка
     assert "не поддерживается" in str(error.value)
 
 
-def test_shared_context_convert_factory_convert_independent_operations():
+def test_shared_context_reference_convertor_convert_independent_operations():
     """<summary>Вложения используют общий контекст, а повторный внешний вызов получает новый.</summary>"""
     # Подготовка
     factory = convert_factory()
-    convertor = factory.create("flour")
     source = {"first": "flour", "second": ["sugar"]}
+    convertor = factory.create(source)
+    original_convert = basic_convertor.convert
+    contexts = []
+
+    def record_convert(self, value, field_name="value", context=None):
+        """Сохраняет переданный контекст перед настоящим преобразованием поля."""
+        contexts.append(context)
+        return original_convert(self, value, field_name, context)
 
     # Действие
-    with patch.object(convertor, "convert", wraps=convertor.convert) as convert:
-        result = factory.convert(source)
-        repeated_result = factory.convert(source)
+    with patch.object(basic_convertor, "convert", autospec=True, side_effect=record_convert):
+        result = convertor.convert(source)
+        repeated_result = convertor.convert(source)
 
     # Проверка
     assert result == {
         "value": {"first": "flour", "second": ["sugar"]},
     }
     assert repeated_result == result
-    assert convert.call_count == 4
-    contexts = [call.args[2] for call in convert.call_args_list]
+    assert len(contexts) == 4
     assert contexts[0] is contexts[1]
     assert contexts[2] is contexts[3]
     assert contexts[0] is not contexts[2]
