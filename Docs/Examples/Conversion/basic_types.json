@@ -1,0 +1,12 @@
+{
+    "example": {
+        "name": "Мука",
+        "quantity": 2,
+        "coefficient": 0.9,
+        "zero": 0,
+        "empty_string": "",
+        "is_available": true,
+        "is_packaging": false,
+        "mass_ratio": null
+    }
+}
