@@ -1,3 +1,5 @@
+from enum import Enum
+
 from Src.Core.abstract_convertor import abstract_convertor
 from Src.Dtos.conversion_context_dto import conversion_context_dto
 
@@ -8,7 +10,9 @@ class basic_convertor(abstract_convertor):
     @staticmethod
     def can_convert(source: object) -> bool:
         """Проверяет принадлежность к поддерживаемым простым типам."""
-        return source is None or isinstance(source, (int, float, str, bool))
+        return source is None or (
+            isinstance(source, (int, float, str, bool)) and not isinstance(source, Enum)
+        )
 
     def convert(
         self,

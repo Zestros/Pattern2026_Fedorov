@@ -5,7 +5,7 @@ from Src.Dtos.conversion_context_dto import conversion_context_dto
 
 
 class datetime_convertor(abstract_convertor):
-    """Преобразует дату и время в строку ISO 8601 с исходным смещением."""
+    """Сохраняет тип datetime и строку ISO 8601 с исходным смещением."""
 
     @staticmethod
     def can_convert(source: object) -> bool:
@@ -18,11 +18,11 @@ class datetime_convertor(abstract_convertor):
         field_name: str = "value",
         context: conversion_context_dto | None = None,
     ) -> dict[str, object]:
-        """Возвращает ISO-представление, сохраняя микросекунды и часовой пояс."""
+        """Возвращает дату с меткой типа, сохраняя микросекунды и часовой пояс."""
         return self._convert(source, field_name, context)
 
     def _convert_value(
         self, source: object, context: conversion_context_dto,
-    ) -> str:
-        """Формирует строку ISO 8601 для проверенной даты."""
-        return source.isoformat()
+    ) -> dict[str, object]:
+        """Отличает дату от обычной строки такого же содержания."""
+        return {"$type": "datetime", "$value": source.isoformat(), "$fold": source.fold}

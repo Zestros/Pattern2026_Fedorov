@@ -1,4 +1,5 @@
 from inspect import getattr_static
+from enum import Enum
 from types import ModuleType
 
 from Src.Core.abstract_convertor import abstract_convertor
@@ -34,7 +35,7 @@ class reference_convertor(abstract_convertor):
         field_name: str = "value",
         context: conversion_context_dto | None = None,
     ) -> dict[str, object]:
-        """Преобразует составное значение с общей защитой от циклов."""
+        """Преобразует граф, сохраняя общие объекты и циклы через $id/$ref."""
         return self._convert(source, field_name, context)
 
     @staticmethod
@@ -55,21 +56,34 @@ class reference_convertor(abstract_convertor):
     def _convert_value(
         self, source: object, context: conversion_context_dto,
     ) -> object:
-        """Сохраняет ключи словарей, порядок коллекций и имена полей объектов."""
+        """Регистрирует объект до обхода его полей и сохраняет повторные ссылки."""
+        if isinstance(source, Enum):
+            return {"$type": type(source).__name__, "$value": source.name}
+        identity = id(source)
+        if identity in context.object_ids:
+            return {"$ref": context.object_ids[identity]}
+        identifier = str(len(context.object_ids) + 1)
+        context.object_ids[identity] = identifier
+        context.objects[identity] = source
+        result = {"$id": identifier, "$type": type(source).__name__}
         if isinstance(source, dict):
-            return {
-                key: self._convert_nested(value, str(key), context)
+            # Пары сохраняют типы ключей и отделяют пользовательские $ref/$id от метаданных.
+            result["$items"] = [
+                [self._convert_nested(key, "key", context),
+                 self._convert_nested(value, str(key), context)]
                 for key, value in source.items()
-            }
-        if isinstance(source, (list, tuple)):
-            return [
+            ]
+        elif isinstance(source, (list, tuple)):
+            result["$values"] = [
                 self._convert_nested(value, str(index), context)
                 for index, value in enumerate(source)
             ]
-        return {
-            name: self._convert_nested(getattr(source, name), name, context)
-            for name in self._get_fields(source)
-        }
+        else:
+            result["$fields"] = {
+                name: self._convert_nested(getattr(source, name), name, context)
+                for name in self._get_fields(source)
+            }
+        return result
 
     def _convert_nested(
         self, source: object, field_name: str, context: conversion_context_dto,

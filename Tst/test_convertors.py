@@ -11,6 +11,7 @@ from Src.Core.exception import arguments_exception
 from Src.Logics.basic_convertor import basic_convertor
 from Src.Logics.datetime_convertor import datetime_convertor
 from Src.Logics.reference_convertor import reference_convertor
+from Src.Logics.reference_restore import reference_restore
 from Src.Models.group_model import group_model
 
 
@@ -73,7 +74,7 @@ def test_iso_string_datetime_convertor_convert_date_and_timezone(value, expected
 
     # Проверка
     assert result == {
-        "created_at": expected,
+        "created_at": {"$type": "datetime", "$value": expected, "$fold": value.fold},
     }
 
 
@@ -102,7 +103,9 @@ def test_inherited_fields_reference_convertor_convert_group():
 
     # Проверка
     assert result == {
-        "group": {"name": "Бакалея", "unique_code": group.unique_code},
+        "group": {"$id": "1", "$type": "group_model", "$fields": {
+            "name": "Бакалея", "unique_code": group.unique_code,
+        }},
     }
 
 
@@ -117,7 +120,9 @@ def test_public_fields_reference_convertor_convert_instance_attributes():
 
     # Проверка
     assert result == {
-        "value": {"name": "Мука", "quantity": 2},
+        "value": {"$id": "1", "$type": "SimpleNamespace", "$fields": {
+            "name": "Мука", "quantity": 2,
+        }},
     }
 
 
@@ -137,24 +142,19 @@ def test_nested_values_reference_convertor_convert_without_factory():
         details={"values": (False, None, "")},
     )
     convertor = reference_convertor()
-    expected_group = {"name": "Бакалея", "unique_code": group.unique_code}
 
     # Действие
     result = convertor.convert(source)
+    restored = reference_restore().restore(result)
 
     # Проверка
-    assert result == {
-        "value": {
-            "name": "Мука", "quantity": 2,
-            "created_at": "2026-10-22T18:30:00+08:00",
-            "group": expected_group,
-            "rows": [
-                expected_group,
-                {"created_at": "2026-10-22T18:30:00+08:00", "quantity": 0},
-            ],
-            "details": {"values": [False, None, ""]},
-        },
-    }
+    assert restored.name == "Мука"
+    assert restored.quantity == 2
+    assert restored.created_at == created_at
+    assert restored.group.name == "Бакалея"
+    assert restored.rows[0] is restored.group
+    assert restored.rows[1] == {"created_at": created_at, "quantity": 0}
+    assert restored.details == {"values": (False, None, "")}
 
 
 def test_no_getter_calls_reference_convertor_get_fields_before_conversion():
@@ -209,7 +209,8 @@ def test_clean_context_reference_convertor_convert_when_getter_fails():
         convertor.convert(source, context=context)
 
     # Проверка
-    assert context.active_ids == set()
+    assert context.object_ids == {}
+    assert context.objects == {}
     assert context.path == []
 
 

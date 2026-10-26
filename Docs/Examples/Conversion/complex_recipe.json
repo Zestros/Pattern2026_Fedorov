@@ -1,250 +1,326 @@
 {
     "example": {
-        "description": "Торт с вложенными рецептами коржей и крема",
-        "created_at": "2026-10-22T18:30:00+08:00",
-        "cake": {
-            "full_name": "Бисквитный торт со сметанным кремом",
-            "group": {
-                "name": "Бакалея",
-                "unique_code": "88edbf873bb8437ab75595d46c8845d1"
-            },
-            "mass_ratio": null,
-            "name": "Бисквитный торт",
-            "output_quantity": 1,
-            "recipe": {
-                "gross_weight": 805.0,
-                "ingredients": [
-                    {
-                        "is_packaging": false,
-                        "item": {
-                            "full_name": "Бисквитный корж для торта",
-                            "group": {
+        "$id": "1",
+        "$type": "dict",
+        "$items": [
+            [
+                "description",
+                "Торт с вложенными рецептами коржей и крема"
+            ],
+            [
+                "created_at",
+                {
+                    "$type": "datetime",
+                    "$value": "2026-10-22T18:30:00+08:00",
+                    "$fold": 0
+                }
+            ],
+            [
+                "cake",
+                {
+                    "$id": "2",
+                    "$type": "recipe_item_model",
+                    "$fields": {
+                        "full_name": "Бисквитный торт со сметанным кремом",
+                        "group": {
+                            "$id": "3",
+                            "$type": "group_model",
+                            "$fields": {
                                 "name": "Бакалея",
-                                "unique_code": "88edbf873bb8437ab75595d46c8845d1"
-                            },
-                            "mass_ratio": null,
-                            "name": "Бисквитный корж",
-                            "output_quantity": 4,
-                            "recipe": {
-                                "gross_weight": 600.0,
-                                "ingredients": [
-                                    {
-                                        "is_packaging": false,
-                                        "item": {
-                                            "full_name": "Мука пшеничная",
-                                            "group": {
-                                                "name": "Бакалея",
-                                                "unique_code": "88edbf873bb8437ab75595d46c8845d1"
-                                            },
-                                            "mass_ratio": null,
-                                            "name": "Мука",
-                                            "unique_code": "1302c5c1bd0942149c3efef0613f8765",
-                                            "unit": {
-                                                "base_unit": null,
-                                                "coefficient": 1,
-                                                "name": "грамм",
-                                                "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
-                                            }
-                                        },
-                                        "quantity": 200.0,
-                                        "unique_code": "b1ff794df93a4668ab4c79ed18843f77"
-                                    },
-                                    {
-                                        "is_packaging": false,
-                                        "item": {
-                                            "full_name": "Сахар белый",
-                                            "group": {
-                                                "name": "Бакалея",
-                                                "unique_code": "88edbf873bb8437ab75595d46c8845d1"
-                                            },
-                                            "mass_ratio": null,
-                                            "name": "Сахар",
-                                            "unique_code": "4832361b63be48c896960a06b46fa2d6",
-                                            "unit": {
-                                                "base_unit": null,
-                                                "coefficient": 1,
-                                                "name": "грамм",
-                                                "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
-                                            }
-                                        },
-                                        "quantity": 150.0,
-                                        "unique_code": "05d7d1fc4a2d4526b6238a33763bcac9"
-                                    },
-                                    {
-                                        "is_packaging": false,
-                                        "item": {
-                                            "full_name": "Яйцо без скорлупы",
-                                            "group": {
-                                                "name": "Бакалея",
-                                                "unique_code": "88edbf873bb8437ab75595d46c8845d1"
-                                            },
-                                            "mass_ratio": null,
-                                            "name": "Яйцо",
-                                            "unique_code": "5c43b92d4b3949c1ba0d79e416beddf8",
-                                            "unit": {
-                                                "base_unit": null,
-                                                "coefficient": 1,
-                                                "name": "грамм",
-                                                "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
-                                            }
-                                        },
-                                        "quantity": 250.0,
-                                        "unique_code": "8f4e6bcbcbd94f5aae271cf716d7f9b0"
-                                    }
-                                ],
-                                "mass_coefficient": 0.9,
-                                "mass_unit": {
-                                    "base_unit": null,
-                                    "coefficient": 1,
-                                    "name": "грамм",
-                                    "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
-                                },
-                                "name": "Бисквитные коржи",
-                                "net_weight": 540.0,
-                                "packaging_weight": 0.0,
-                                "unique_code": "ab89bbaf0c2f4496b2cf71f4ebf180ca"
-                            },
-                            "unique_code": "7b05f59cd7ce46fea7657e06269506b3",
-                            "unit": {
-                                "base_unit": null,
-                                "coefficient": 1,
-                                "name": "штука",
-                                "unique_code": "18b126351bd949a0bfa0c6d87facb53a"
+                                "unique_code": "cdf47821cc0a4cdb97d74a369f9dd011"
                             }
                         },
-                        "quantity": 3,
-                        "unique_code": "0f9cde4c40174125bdac6d213bb56287"
-                    },
-                    {
-                        "is_packaging": false,
-                        "item": {
-                            "full_name": "Порция сметанного крема для торта",
-                            "group": {
-                                "name": "Бакалея",
-                                "unique_code": "88edbf873bb8437ab75595d46c8845d1"
-                            },
-                            "mass_ratio": null,
-                            "name": "Порция крема",
-                            "output_quantity": 1,
-                            "recipe": {
-                                "gross_weight": 400.0,
-                                "ingredients": [
-                                    {
-                                        "is_packaging": false,
-                                        "item": {
-                                            "full_name": "Сметана для крема",
-                                            "group": {
-                                                "name": "Бакалея",
-                                                "unique_code": "88edbf873bb8437ab75595d46c8845d1"
-                                            },
-                                            "mass_ratio": null,
-                                            "name": "Сметана",
-                                            "unique_code": "91641c46132b471cafbd361e86eb09cc",
-                                            "unit": {
-                                                "base_unit": null,
-                                                "coefficient": 1,
-                                                "name": "грамм",
-                                                "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
+                        "mass_ratio": null,
+                        "name": "Бисквитный торт",
+                        "output_quantity": 1,
+                        "recipe": {
+                            "$id": "4",
+                            "$type": "recipe_model",
+                            "$fields": {
+                                "gross_weight": 805.0,
+                                "ingredients": {
+                                    "$id": "5",
+                                    "$type": "tuple",
+                                    "$values": [
+                                        {
+                                            "$id": "6",
+                                            "$type": "recipe_ingredient_model",
+                                            "$fields": {
+                                                "is_packaging": false,
+                                                "item": {
+                                                    "$id": "7",
+                                                    "$type": "recipe_item_model",
+                                                    "$fields": {
+                                                        "full_name": "Бисквитный корж для торта",
+                                                        "group": {
+                                                            "$ref": "3"
+                                                        },
+                                                        "mass_ratio": null,
+                                                        "name": "Бисквитный корж",
+                                                        "output_quantity": 4,
+                                                        "recipe": {
+                                                            "$id": "8",
+                                                            "$type": "recipe_model",
+                                                            "$fields": {
+                                                                "gross_weight": 600.0,
+                                                                "ingredients": {
+                                                                    "$id": "9",
+                                                                    "$type": "tuple",
+                                                                    "$values": [
+                                                                        {
+                                                                            "$id": "10",
+                                                                            "$type": "recipe_ingredient_model",
+                                                                            "$fields": {
+                                                                                "is_packaging": false,
+                                                                                "item": {
+                                                                                    "$id": "11",
+                                                                                    "$type": "item_model",
+                                                                                    "$fields": {
+                                                                                        "full_name": "Мука пшеничная",
+                                                                                        "group": {
+                                                                                            "$ref": "3"
+                                                                                        },
+                                                                                        "mass_ratio": null,
+                                                                                        "name": "Мука",
+                                                                                        "unique_code": "2a53245133cb4810ab46e59ae2430ec0",
+                                                                                        "unit": {
+                                                                                            "$id": "12",
+                                                                                            "$type": "unit_model",
+                                                                                            "$fields": {
+                                                                                                "base_unit": {
+                                                                                                    "$ref": "12"
+                                                                                                },
+                                                                                                "coefficient": 1,
+                                                                                                "name": "грамм",
+                                                                                                "unique_code": "63f19a98557f4f4b8ca61412528cef78"
+                                                                                            }
+                                                                                        }
+                                                                                    }
+                                                                                },
+                                                                                "quantity": 200.0,
+                                                                                "unique_code": "8ffdae993faa4c26867e8595540fe691"
+                                                                            }
+                                                                        },
+                                                                        {
+                                                                            "$id": "13",
+                                                                            "$type": "recipe_ingredient_model",
+                                                                            "$fields": {
+                                                                                "is_packaging": false,
+                                                                                "item": {
+                                                                                    "$id": "14",
+                                                                                    "$type": "item_model",
+                                                                                    "$fields": {
+                                                                                        "full_name": "Сахар белый",
+                                                                                        "group": {
+                                                                                            "$ref": "3"
+                                                                                        },
+                                                                                        "mass_ratio": null,
+                                                                                        "name": "Сахар",
+                                                                                        "unique_code": "395a4ba2ac7c4af8b94941a2280e6f9b",
+                                                                                        "unit": {
+                                                                                            "$ref": "12"
+                                                                                        }
+                                                                                    }
+                                                                                },
+                                                                                "quantity": 150.0,
+                                                                                "unique_code": "acca253da6ad49deaf3deacb6e8d5e3b"
+                                                                            }
+                                                                        },
+                                                                        {
+                                                                            "$id": "15",
+                                                                            "$type": "recipe_ingredient_model",
+                                                                            "$fields": {
+                                                                                "is_packaging": false,
+                                                                                "item": {
+                                                                                    "$id": "16",
+                                                                                    "$type": "item_model",
+                                                                                    "$fields": {
+                                                                                        "full_name": "Яйцо без скорлупы",
+                                                                                        "group": {
+                                                                                            "$ref": "3"
+                                                                                        },
+                                                                                        "mass_ratio": null,
+                                                                                        "name": "Яйцо",
+                                                                                        "unique_code": "3d9d40a7934e45ec8fe19da74bdcd83a",
+                                                                                        "unit": {
+                                                                                            "$ref": "12"
+                                                                                        }
+                                                                                    }
+                                                                                },
+                                                                                "quantity": 250.0,
+                                                                                "unique_code": "24b22018e1784c6285adb451ceca2d96"
+                                                                            }
+                                                                        }
+                                                                    ]
+                                                                },
+                                                                "mass_coefficient": 0.9,
+                                                                "mass_unit": {
+                                                                    "$ref": "12"
+                                                                },
+                                                                "name": "Бисквитные коржи",
+                                                                "net_weight": 540.0,
+                                                                "packaging_weight": 0.0,
+                                                                "unique_code": "547a4b8b9fa64cbc8d5b47a146f624e8"
+                                                            }
+                                                        },
+                                                        "unique_code": "93f12ebf74d341a1a2bbb49c850c91d8",
+                                                        "unit": {
+                                                            "$id": "17",
+                                                            "$type": "unit_model",
+                                                            "$fields": {
+                                                                "base_unit": {
+                                                                    "$ref": "17"
+                                                                },
+                                                                "coefficient": 1,
+                                                                "name": "штука",
+                                                                "unique_code": "6adb4b25c1384da9928b9b250aaa9758"
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                "quantity": 3,
+                                                "unique_code": "e1d91f84ad284007b8be1adcf99eb87a"
                                             }
                                         },
-                                        "quantity": 300.0,
-                                        "unique_code": "985df723a27a4dcdbe7ed064b8a476dd"
-                                    },
-                                    {
-                                        "is_packaging": false,
-                                        "item": {
-                                            "full_name": "Сахар белый",
-                                            "group": {
-                                                "name": "Бакалея",
-                                                "unique_code": "88edbf873bb8437ab75595d46c8845d1"
-                                            },
-                                            "mass_ratio": null,
-                                            "name": "Сахар",
-                                            "unique_code": "4832361b63be48c896960a06b46fa2d6",
-                                            "unit": {
-                                                "base_unit": null,
-                                                "coefficient": 1,
-                                                "name": "грамм",
-                                                "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
+                                        {
+                                            "$id": "18",
+                                            "$type": "recipe_ingredient_model",
+                                            "$fields": {
+                                                "is_packaging": false,
+                                                "item": {
+                                                    "$id": "19",
+                                                    "$type": "recipe_item_model",
+                                                    "$fields": {
+                                                        "full_name": "Порция сметанного крема для торта",
+                                                        "group": {
+                                                            "$ref": "3"
+                                                        },
+                                                        "mass_ratio": null,
+                                                        "name": "Порция крема",
+                                                        "output_quantity": 1,
+                                                        "recipe": {
+                                                            "$id": "20",
+                                                            "$type": "recipe_model",
+                                                            "$fields": {
+                                                                "gross_weight": 400.0,
+                                                                "ingredients": {
+                                                                    "$id": "21",
+                                                                    "$type": "tuple",
+                                                                    "$values": [
+                                                                        {
+                                                                            "$id": "22",
+                                                                            "$type": "recipe_ingredient_model",
+                                                                            "$fields": {
+                                                                                "is_packaging": false,
+                                                                                "item": {
+                                                                                    "$id": "23",
+                                                                                    "$type": "item_model",
+                                                                                    "$fields": {
+                                                                                        "full_name": "Сметана для крема",
+                                                                                        "group": {
+                                                                                            "$ref": "3"
+                                                                                        },
+                                                                                        "mass_ratio": null,
+                                                                                        "name": "Сметана",
+                                                                                        "unique_code": "d1b6cd0a5d474303a04300553027ef53",
+                                                                                        "unit": {
+                                                                                            "$ref": "12"
+                                                                                        }
+                                                                                    }
+                                                                                },
+                                                                                "quantity": 300.0,
+                                                                                "unique_code": "bdc0987f7f5f40989b2e6bb330df0c63"
+                                                                            }
+                                                                        },
+                                                                        {
+                                                                            "$id": "24",
+                                                                            "$type": "recipe_ingredient_model",
+                                                                            "$fields": {
+                                                                                "is_packaging": false,
+                                                                                "item": {
+                                                                                    "$ref": "14"
+                                                                                },
+                                                                                "quantity": 100.0,
+                                                                                "unique_code": "bffbe7a3d74247f1bff195ffa7451c6e"
+                                                                            }
+                                                                        }
+                                                                    ]
+                                                                },
+                                                                "mass_coefficient": 1,
+                                                                "mass_unit": {
+                                                                    "$ref": "12"
+                                                                },
+                                                                "name": "Сметанный крем",
+                                                                "net_weight": 400.0,
+                                                                "packaging_weight": 0.0,
+                                                                "unique_code": "90f2a9b2e05544fd935e80195751b55c"
+                                                            }
+                                                        },
+                                                        "unique_code": "57a15cbc5e084621986dce09f631e558",
+                                                        "unit": {
+                                                            "$ref": "17"
+                                                        }
+                                                    }
+                                                },
+                                                "quantity": 1,
+                                                "unique_code": "87522cfba03a43d5a39a44501ec11ac7"
                                             }
-                                        },
-                                        "quantity": 100.0,
-                                        "unique_code": "b1675b241d0e4a328237b0d01dc63bf5"
-                                    }
-                                ],
+                                        }
+                                    ]
+                                },
                                 "mass_coefficient": 1,
                                 "mass_unit": {
-                                    "base_unit": null,
-                                    "coefficient": 1,
-                                    "name": "грамм",
-                                    "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
+                                    "$ref": "12"
                                 },
-                                "name": "Сметанный крем",
-                                "net_weight": 400.0,
+                                "name": "Сборка бисквитного торта",
+                                "net_weight": 805.0,
                                 "packaging_weight": 0.0,
-                                "unique_code": "7d276fd38e4e4a73b97e170bf7fa3295"
-                            },
-                            "unique_code": "e5fa7f5a716b46d2b81f4b598bea650c",
-                            "unit": {
-                                "base_unit": null,
-                                "coefficient": 1,
-                                "name": "штука",
-                                "unique_code": "18b126351bd949a0bfa0c6d87facb53a"
+                                "unique_code": "5d9cb31e91fa46feb233510d4e2cae27"
                             }
                         },
-                        "quantity": 1,
-                        "unique_code": "154b88c0a7154dccaa381ebec3ffbb45"
+                        "unique_code": "b066095e6f2946169c993033d60f43f5",
+                        "unit": {
+                            "$ref": "17"
+                        }
                     }
-                ],
-                "mass_coefficient": 1,
-                "mass_unit": {
-                    "base_unit": null,
-                    "coefficient": 1,
-                    "name": "грамм",
-                    "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
-                },
-                "name": "Сборка бисквитного торта",
-                "net_weight": 805.0,
-                "packaging_weight": 0.0,
-                "unique_code": "86a76c722a184ce0a35e4af28b11c4a7"
-            },
-            "unique_code": "0a67c12f1a8b4a368031a35f787d4d22",
-            "unit": {
-                "base_unit": null,
-                "coefficient": 1,
-                "name": "штука",
-                "unique_code": "18b126351bd949a0bfa0c6d87facb53a"
-            }
-        },
-        "units": [
-            {
-                "base_unit": null,
-                "coefficient": 1,
-                "name": "грамм",
-                "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
-            },
-            {
-                "base_unit": {
-                    "base_unit": null,
-                    "coefficient": 1,
-                    "name": "грамм",
-                    "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
-                },
-                "coefficient": 1000,
-                "name": "килограмм",
-                "unique_code": "74f2242af2dc4e1b81cad36dbed650aa"
-            },
-            {
-                "base_unit": {
-                    "base_unit": null,
-                    "coefficient": 1,
-                    "name": "грамм",
-                    "unique_code": "fcff6ee489f94f7e9a2d4512d8fd38bd"
-                },
-                "coefficient": 0.001,
-                "name": "миллиграмм",
-                "unique_code": "c758fc241a0b4044a491467dd62a4429"
-            }
+                }
+            ],
+            [
+                "units",
+                {
+                    "$id": "25",
+                    "$type": "list",
+                    "$values": [
+                        {
+                            "$ref": "12"
+                        },
+                        {
+                            "$id": "26",
+                            "$type": "unit_model",
+                            "$fields": {
+                                "base_unit": {
+                                    "$ref": "12"
+                                },
+                                "coefficient": 1000,
+                                "name": "килограмм",
+                                "unique_code": "9d5422edae5545bcb5adc3ffc05e24df"
+                            }
+                        },
+                        {
+                            "$id": "27",
+                            "$type": "unit_model",
+                            "$fields": {
+                                "base_unit": {
+                                    "$ref": "12"
+                                },
+                                "coefficient": 0.001,
+                                "name": "миллиграмм",
+                                "unique_code": "12d56826ef44484288d7fa7bea6ecfbb"
+                            }
+                        }
+                    ]
+                }
+            ]
         ]
     }
 }

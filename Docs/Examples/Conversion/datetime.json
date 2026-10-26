@@ -1,7 +1,36 @@
 {
     "example": {
-        "without_timezone": "2026-10-22T18:30:00",
-        "with_timezone": "2026-10-22T18:30:15.123456+08:00",
-        "utc": "2026-10-22T10:30:00+00:00"
+        "$id": "1",
+        "$type": "dict",
+        "$items": [
+            [
+                "without_timezone",
+                {
+                    "$type": "datetime",
+                    "$value": "2026-10-22T18:30:00",
+                    "$fold": 0
+                }
+            ],
+            [
+                "with_timezone",
+                {
+                    "$type": "datetime",
+                    "$value": "2026-10-22T18:30:15.123456+08:00",
+                    "$fold": 0
+                }
+            ],
+            [
+                "utc",
+                {
+                    "$type": "datetime",
+                    "$value": "2026-10-22T10:30:00+00:00",
+                    "$fold": 0
+                }
+            ],
+            [
+                "text",
+                "2026-10-22T18:30:00"
+            ]
+        ]
     }
 }
