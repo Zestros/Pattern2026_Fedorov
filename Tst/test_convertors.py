@@ -136,11 +136,12 @@ def test_nested_values_reference_convertor_convert_without_factory():
     # Подготовка
     group = group_model.create_grocery()
     created_at = datetime(2026, 10, 22, 18, 30, tzinfo=timezone(timedelta(hours=8)))
-    source = SimpleNamespace(
-        name="Мука", quantity=2, created_at=created_at, group=group,
-        rows=[group, {"created_at": created_at, "quantity": 0}],
-        details={"values": (False, None, "")},
-    )
+    source = group_model("Мука")
+    source.quantity = 2
+    source.created_at = created_at
+    source.group = group
+    source.rows = [group, {"created_at": created_at, "quantity": 0}]
+    source.details = {"values": (False, None, "")}
     convertor = reference_convertor()
 
     # Действие

@@ -6,6 +6,7 @@ from pathlib import Path
 from uuid import UUID
 
 from Src.Dtos.conversion_context_dto import conversion_context_dto
+from Src.Logics.Restore.restore_factory import restore_factory
 from Src.Logics.convert_factory import convert_factory
 from Src.Logics.reference_restore import reference_restore
 from Src.Logics.storage_manager import storage_manager
@@ -122,6 +123,48 @@ def test_saved_complex_recipe_convert_export_cake_and_shared_units():
     assert restored["units"][2].base_unit is restored["units"][0]
     assert convertor.convert(restored, "example") == saved
     assert context.path == []
+
+
+def without_unique_codes(source: object) -> object:
+    """Убирает доменные коды, которые при создании нового хранилища генерируются заново."""
+    if isinstance(source, dict):
+        return {
+            key: without_unique_codes(value)
+            for key, value in source.items() if key != "unique_code"
+        }
+    if isinstance(source, list):
+        return [without_unique_codes(value) for value in source]
+    return source
+
+
+def test_matching_storage_reference_restore_restore_saved_json_without_first_start(monkeypatch):
+    """
+    <summary>
+    Сохранённый storage.json читается при выключенном первом старте.
+    Загруженные данные сравниваются с отдельно сформированным хранилищем
+    с учётом того, что новые модели получают новые доменные коды.
+    </summary>
+    """
+    # Подготовка
+    monkeypatch.setattr(restore_factory, "_restore_factory__instance", None)
+    monkeypatch.setattr(storage_manager, "_storage_manager__instance", None)
+    settings = settings_model()
+    settings.first_start = False
+    empty_storage = storage_manager(settings)
+    path = Path(__file__).resolve().parents[2] / "Docs" / "Examples" / "Conversion" / "storage.json"
+    saved = json.loads(path.read_text(encoding="utf-8"))
+    # Действие
+    restored = reference_restore().restore(saved, "storage")
+    monkeypatch.setattr(storage_manager, "_storage_manager__instance", None)
+    expected = storage_manager(settings_model())
+    convertor = convert_factory().create(expected)
+    restored_data = convertor.convert(restored, "storage")
+    expected_data = convertor.convert(expected, "storage")
+    # Проверка
+    assert isinstance(restored, storage_manager)
+    assert not empty_storage.items
+    assert restored_data == saved
+    assert without_unique_codes(restored_data) == without_unique_codes(expected_data)
 
 
 def test_saved_storage_convert_export_all_collections(monkeypatch):

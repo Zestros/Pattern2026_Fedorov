@@ -2,7 +2,6 @@
 
 import json
 from datetime import datetime
-from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -96,7 +95,7 @@ def test_shared_base_reference_convertor_convert_independent_branches():
     assert restored[2].convert_to(1000, restored[1]) == 1
 
 
-@pytest.mark.parametrize("kind", ["list", "dict", "object", "model", "unit", "mixed"])
+@pytest.mark.parametrize("kind", ["list", "dict", "group", "model", "unit", "mixed"])
 def test_restored_cycle_reference_convertor_convert_supported_graph(kind):
     """<summary>Циклы списков, словарей и известных объектов восстанавливаются по идентичности.</summary>"""
     # Подготовка
@@ -115,7 +114,7 @@ def test_restored_cycle_reference_convertor_convert_supported_graph(kind):
         elif kind == "model":
             source = abstract_model()
         else:
-            source = SimpleNamespace()
+            source = group_model("Бакалея")
         source.link = source
     convertor = reference_convertor()
     # Действие
