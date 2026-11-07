@@ -136,7 +136,7 @@ def test_forward_reference_reference_restore_restore_definition_after_reference(
     ({"$id": "1", "$type": "list", "$values": {}}, "Ожидается массив"),
     ({"$type": "datetime", "$value": "bad date", "$fold": 0}, "Некорректные данные"),
     ({"$type": "datetime", "$value": "2026-10-22", "$fold": 3}, "$fold"),
-    ({"$id": "1", "$type": "SimpleNamespace", "$fields": {"_private": 1}}, "публичные"),
+    ({"$id": "1", "$type": "group_model", "$fields": {"_private": 1}}, "публичные"),
     ({"$id": "1", "$type": "tuple", "$values": [{"$ref": "1"}]}, "tuple"),
 ])
 def test_arguments_exception_reference_restore_restore_invalid_graph(value, message):

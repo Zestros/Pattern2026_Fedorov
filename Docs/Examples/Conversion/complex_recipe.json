@@ -27,7 +27,7 @@
                             "$type": "group_model",
                             "$fields": {
                                 "name": "Бакалея",
-                                "unique_code": "f75a4bd855934d53be7897706371d2af"
+                                "unique_code": "8076816848d949d998325bd9e06b8f1a"
                             }
                         },
                         "mass_ratio": null,
@@ -82,7 +82,7 @@
                                                                                         },
                                                                                         "mass_ratio": null,
                                                                                         "name": "Мука",
-                                                                                        "unique_code": "151d18e975844488b15569f78517e391",
+                                                                                        "unique_code": "b133c5ccae3a4c31ad0874391e9170f5",
                                                                                         "unit": {
                                                                                             "$id": "12",
                                                                                             "$type": "unit_model",
@@ -92,13 +92,13 @@
                                                                                                 },
                                                                                                 "coefficient": 1,
                                                                                                 "name": "грамм",
-                                                                                                "unique_code": "828f5a98f70f41dca8ff8132875aad77"
+                                                                                                "unique_code": "62fb522ac0ef4b308d4f7a3641bbdb51"
                                                                                             }
                                                                                         }
                                                                                     }
                                                                                 },
                                                                                 "quantity": 200.0,
-                                                                                "unique_code": "fba641aa273442cea293a2a809a6226c"
+                                                                                "unique_code": "4b9254f0116b4f199dd216194c0acaae"
                                                                             }
                                                                         },
                                                                         {
@@ -116,14 +116,14 @@
                                                                                         },
                                                                                         "mass_ratio": null,
                                                                                         "name": "Сахар",
-                                                                                        "unique_code": "d97b317067354a35b64df614234e2ce9",
+                                                                                        "unique_code": "c0821d8db4af4918aed08fbb9eb240b5",
                                                                                         "unit": {
                                                                                             "$ref": "12"
                                                                                         }
                                                                                     }
                                                                                 },
                                                                                 "quantity": 150.0,
-                                                                                "unique_code": "fdfd49af6fcb480796d86f53fbb0811b"
+                                                                                "unique_code": "5bac8b1aadf14af8aabfd3b7ed8faea5"
                                                                             }
                                                                         },
                                                                         {
@@ -141,14 +141,14 @@
                                                                                         },
                                                                                         "mass_ratio": null,
                                                                                         "name": "Яйцо",
-                                                                                        "unique_code": "8a3d6932745840379f6f3ae5c99743d7",
+                                                                                        "unique_code": "38efe2295ddd4eb193aef2110f2ad344",
                                                                                         "unit": {
                                                                                             "$ref": "12"
                                                                                         }
                                                                                     }
                                                                                 },
                                                                                 "quantity": 250.0,
-                                                                                "unique_code": "415c47cbded04ced8c030d5892e42247"
+                                                                                "unique_code": "71f49bee6f5e4925938f0a6d2665288e"
                                                                             }
                                                                         }
                                                                     ]
@@ -160,10 +160,10 @@
                                                                 "name": "Бисквитные коржи",
                                                                 "net_weight": 540.0,
                                                                 "packaging_weight": 0.0,
-                                                                "unique_code": "6bb69427cb404b638ec489dcfb8f6a47"
+                                                                "unique_code": "47fcb5f45fc04dfa9759e0611892beac"
                                                             }
                                                         },
-                                                        "unique_code": "86de16c351e94c41b2ee72d8892e10e1",
+                                                        "unique_code": "4d2d48f443d245058eab29d4c3613484",
                                                         "unit": {
                                                             "$id": "17",
                                                             "$type": "unit_model",
@@ -173,13 +173,13 @@
                                                                 },
                                                                 "coefficient": 1,
                                                                 "name": "штука",
-                                                                "unique_code": "5f1ba86c78584f3b83e5f246d7766ed6"
+                                                                "unique_code": "92beff1db953492b9ec317b79d6f5ce9"
                                                             }
                                                         }
                                                     }
                                                 },
                                                 "quantity": 3,
-                                                "unique_code": "b2f9b49958394fe4842773425a72070c"
+                                                "unique_code": "6b04a2b83a6c4ccda3aa755c547843b4"
                                             }
                                         },
                                         {
@@ -222,14 +222,14 @@
                                                                                         },
                                                                                         "mass_ratio": null,
                                                                                         "name": "Сметана",
-                                                                                        "unique_code": "0095f70ca6d949589797ed20f2c79893",
+                                                                                        "unique_code": "ecb1b4ba388d4ecc8cd379af8f9de6f1",
                                                                                         "unit": {
                                                                                             "$ref": "12"
                                                                                         }
                                                                                     }
                                                                                 },
                                                                                 "quantity": 300.0,
-                                                                                "unique_code": "a3435d0e64d04e8fb205e59659dc1379"
+                                                                                "unique_code": "a2809b08c300466cb8c96853fe9c187a"
                                                                             }
                                                                         },
                                                                         {
@@ -241,7 +241,7 @@
                                                                                     "$ref": "14"
                                                                                 },
                                                                                 "quantity": 100.0,
-                                                                                "unique_code": "e8ff0027c3dc4756a86a57e713e30ed0"
+                                                                                "unique_code": "cd142a81078e4f4fb25e74fd967d1f3d"
                                                                             }
                                                                         }
                                                                     ]
@@ -253,17 +253,17 @@
                                                                 "name": "Сметанный крем",
                                                                 "net_weight": 400.0,
                                                                 "packaging_weight": 0.0,
-                                                                "unique_code": "0a3f0775f4f642c69d4ef22bffa2a506"
+                                                                "unique_code": "9954d287a1884a44ad5849681d970612"
                                                             }
                                                         },
-                                                        "unique_code": "dad5f60a3b904fb08d5151471c6c3ad1",
+                                                        "unique_code": "c82127fd4ff344c2982191a9ccd37bcd",
                                                         "unit": {
                                                             "$ref": "17"
                                                         }
                                                     }
                                                 },
                                                 "quantity": 1,
-                                                "unique_code": "a443f6267b3e46eb97c835556eecd502"
+                                                "unique_code": "810ed16bdb2e4671bbeca49a606cf6e8"
                                             }
                                         }
                                     ]
@@ -275,10 +275,10 @@
                                 "name": "Сборка бисквитного торта",
                                 "net_weight": 805.0,
                                 "packaging_weight": 0.0,
-                                "unique_code": "4583712804604498b8628abd6d1984af"
+                                "unique_code": "c107757cd76f4635b8672b5137866c9b"
                             }
                         },
-                        "unique_code": "1a1573b548ae4a84b76d93c2e4792ee8",
+                        "unique_code": "90a590670d5b46f09dfbdc13c4e04570",
                         "unit": {
                             "$ref": "17"
                         }
@@ -303,7 +303,7 @@
                                 },
                                 "coefficient": 1000,
                                 "name": "килограмм",
-                                "unique_code": "2117aa3979cb4e6bab5ce547f4ec55ab"
+                                "unique_code": "309ef48f967f495a817fe32d8f871b1e"
                             }
                         },
                         {
@@ -315,7 +315,7 @@
                                 },
                                 "coefficient": 0.001,
                                 "name": "миллиграмм",
-                                "unique_code": "5fbc904571b74b4985780ebd2af444a8"
+                                "unique_code": "65528c0087394fb0a0c5968e02317bae"
                             }
                         }
                     ]

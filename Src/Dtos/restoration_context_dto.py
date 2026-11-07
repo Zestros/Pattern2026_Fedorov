@@ -9,11 +9,4 @@ class restoration_context_dto:
         self.references: set[str] = set()
         # Служебный ID → созданный экземпляр, включая ещё заполняемые объекты.
         self.objects: dict[str, object] = {}
-
-
-class tuple_reference_dto:
-    """Временно обозначает ссылку на ещё собираемый неизменяемый кортеж."""
-
-    def __init__(self, identifier: str) -> None:
-        """Запоминает ID для связывания после создания кортежа."""
-        self.identifier = identifier
+        
