@@ -11,6 +11,7 @@ from Src.Logics.convert_factory import convert_factory
 from Src.Logics.reference_restore import reference_restore
 from Src.Logics.storage_manager import storage_manager
 from Src.Models.group_model import group_model
+from Src.Models.item_model import item_model
 from Src.Models.recipe_item_model import recipe_item_model
 from Src.Models.settings_model import settings_model
 from Src.Models.unit_model import unit_model
@@ -125,24 +126,45 @@ def test_saved_complex_recipe_convert_export_cake_and_shared_units():
     assert context.path == []
 
 
-def without_unique_codes(source: object) -> object:
-    """Убирает доменные коды, которые при создании нового хранилища генерируются заново."""
-    if isinstance(source, dict):
-        return {
-            key: without_unique_codes(value)
-            for key, value in source.items() if key != "unique_code"
-        }
-    if isinstance(source, list):
-        return [without_unique_codes(value) for value in source]
-    return source
+def assert_item_matches(actual: item_model, expected: item_model) -> None:
+    """Сравнивает свойства продукта и при наличии карты проверяет её строки."""
+    assert type(actual) is type(expected)
+    assert actual.name == expected.name
+    assert actual.full_name == expected.full_name
+    assert actual.group.name == expected.group.name
+    assert actual.unit.name == expected.unit.name
+
+    if expected.mass_ratio is None:
+        assert actual.mass_ratio is None
+    else:
+        assert actual.mass_ratio is not None
+        assert actual.mass_ratio.value == expected.mass_ratio.value
+        actual_ratio_unit = actual.mass_ratio.unit
+        expected_ratio_unit = expected.mass_ratio.unit
+        assert actual_ratio_unit.numerator_unit.name == expected_ratio_unit.numerator_unit.name
+        assert actual_ratio_unit.denominator_unit.name == expected_ratio_unit.denominator_unit.name
+
+    if isinstance(expected, recipe_item_model):
+        assert actual.output_quantity == expected.output_quantity
+        actual_recipe, expected_recipe = actual.recipe, expected.recipe
+        assert actual_recipe.name == expected_recipe.name
+        assert actual_recipe.mass_unit.name == expected_recipe.mass_unit.name
+        assert actual_recipe.mass_coefficient == expected_recipe.mass_coefficient
+        assert actual_recipe.gross_weight == expected_recipe.gross_weight
+        assert actual_recipe.net_weight == expected_recipe.net_weight
+        assert actual_recipe.packaging_weight == expected_recipe.packaging_weight
+        for actual_row, expected_row in zip(actual_recipe.ingredients, expected_recipe.ingredients, strict=True):
+            assert actual_row.quantity == expected_row.quantity
+            assert actual_row.is_packaging is expected_row.is_packaging
+            assert_item_matches(actual_row.item, expected_row.item)
 
 
 def test_matching_storage_reference_restore_restore_saved_json_without_first_start(monkeypatch):
     """
     <summary>
     Сохранённый storage.json читается при выключенном первом старте.
-    Загруженные данные сравниваются с отдельно сформированным хранилищем
-    с учётом того, что новые модели получают новые доменные коды.
+    Проверяются поля и рецепты загруженных моделей по отдельно сформированным моделям.
+    Повторная выгрузка подтверждает сохранение доменных кодов и ссылок из файла.
     </summary>
     """
     # Подготовка
@@ -157,14 +179,28 @@ def test_matching_storage_reference_restore_restore_saved_json_without_first_sta
     restored = reference_restore().restore(saved, "storage")
     monkeypatch.setattr(storage_manager, "_storage_manager__instance", None)
     expected = storage_manager(settings_model())
-    convertor = convert_factory().create(expected)
-    restored_data = convertor.convert(restored, "storage")
-    expected_data = convertor.convert(expected, "storage")
     # Проверка
     assert isinstance(restored, storage_manager)
     assert not empty_storage.items
-    assert restored_data == saved
-    assert without_unique_codes(restored_data) == without_unique_codes(expected_data)
+    assert [group.name for group in restored.groups] == [group.name for group in expected.groups]
+    assert [warehouse.name for warehouse in restored.warehouses] == [
+        warehouse.name for warehouse in expected.warehouses
+    ]
+
+    units = {
+        original.unique_code: actual
+        for actual, original in zip(restored.units, expected.units, strict=True)
+    }
+    for original in expected.units:
+        actual = units[original.unique_code]
+        assert actual.name == original.name
+        assert actual.coefficient == original.coefficient
+        assert actual.base_unit is units[original.base_unit.unique_code]
+
+    for actual, original in zip(restored.items, expected.items, strict=True):
+        assert_item_matches(actual, original)
+
+    assert convert_factory().create(restored).convert(restored, "storage") == saved
 
 
 def test_saved_storage_convert_export_all_collections(monkeypatch):

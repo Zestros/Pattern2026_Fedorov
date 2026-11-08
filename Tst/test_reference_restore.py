@@ -96,6 +96,20 @@ def test_restored_defaults_reference_restore_restore_empty_settings():
     assert restored.unique_code == source.unique_code
 
 
+@pytest.mark.parametrize("field, value", [("company", ""), ("boss_name", None), ("account_name", None)])
+def test_arguments_exception_reference_restore_restore_invalid_optional_setting(field, value):
+    """<summary>Неверный тип необязательного значения отклоняется сеттером при восстановлении.</summary>"""
+    # Подготовка
+    source = settings_model()
+    data = convert_factory().create(source).convert(source)
+    data["value"]["$fields"][field] = value
+    # Действие
+    with pytest.raises(arguments_exception) as error:
+        reference_restore().restore(data)
+    # Проверка
+    assert field in str(error.value)
+
+
 def test_restored_entity_reference_restore_restore_public_self_reference():
     """<summary>Базовая именованная модель сохраняет публичное поле с обратной ссылкой.</summary>"""
     # Подготовка

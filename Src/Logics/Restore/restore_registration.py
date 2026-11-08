@@ -7,7 +7,6 @@ from Src.Logics.Restore.dict_restore import dict_restore
 from Src.Logics.Restore.enum_restore import enum_restore
 from Src.Logics.Restore.list_restore import list_restore
 from Src.Logics.Restore.recipe_restore import recipe_restore
-from Src.Logics.Restore.settings_restore import settings_restore
 from Src.Logics.Restore.storage_restore import storage_restore
 from Src.Logics.Restore.tuple_restore import tuple_restore
 from Src.Logics.Restore.unit_restore import unit_restore
@@ -18,6 +17,7 @@ from Src.Models.ratio_unit_model import ratio_unit_model
 from Src.Models.ratio_value_model import ratio_value_model
 from Src.Models.recipe_ingredient_model import recipe_ingredient_model
 from Src.Models.recipe_item_model import recipe_item_model
+from Src.Models.settings_model import settings_model
 from Src.Models.warehouse_model import warehouse_model
 
 
@@ -26,13 +26,13 @@ def register_restore_handlers(factory) -> None:
     for model_type in (
         abstract_model, entity_model, group_model, warehouse_model,
         ratio_unit_model, ratio_value_model, item_model, recipe_item_model,
-        recipe_ingredient_model, company_model,
+        recipe_ingredient_model, company_model, settings_model,
     ):
         factory.add_model(model_type)
 
     for handler in (
         list_restore(), tuple_restore(), dict_restore(), datetime_restore(),
         enum_restore(report_type_enum), enum_restore(entity_type_enum),
-        unit_restore(), recipe_restore(), settings_restore(), storage_restore(),
+        unit_restore(), recipe_restore(), storage_restore(),
     ):
         factory.add_handler(handler)
