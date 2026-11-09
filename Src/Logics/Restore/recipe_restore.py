@@ -4,31 +4,40 @@ from Src.Models.recipe_model import recipe_model
 
 
 class recipe_restore(model_restore):
-    """Восстанавливает карту до её строк и проверяет пересчитанные массы."""
+    """Читает заголовок карты до строк и проверяет пересчитанные массы."""
+
+    # Расчётные свойства проверяются после восстановления связей.
+    computed_fields = {"gross_weight", "net_weight", "packaging_weight"}
 
     def __init__(self) -> None:
-        """Отделяет аргументы карты, её строки и вычисляемые свойства."""
+        """Регистрирует рецепт и определяет поля его заголовка."""
         super().__init__(recipe_model)
-        self.computed_fields = {"gross_weight", "net_weight", "packaging_weight"}
-        self.handled_fields.update(self.computed_fields | {"ingredients"})
+        self.header_fields = (*recipe_model.constructor_fields(), "unique_code")
+
+    def validate(self, node: dict) -> None:
+        """Проверяет наличие коллекции строк карты."""
+        super().validate(node)
+        if "ingredients" not in node["$fields"]:
+            raise arguments_exception("ingredients", "В рецепте должны быть указаны строки")
 
     def restore(self, instance: recipe_model, node: dict, reader) -> recipe_model:
-        """Создаёт пустую карту, затем добавляет строки через публичный метод."""
+        """Инициализирует заголовок до восстановления вложенных объектов."""
         source = node["$fields"]
         header = {
             name: reader.restore_value(source[name])
-            for name in self.constructor_fields if name in source
+            for name in self.header_fields if name in source
         }
-        self.initialize(instance, header)
-        instance.unique_code = source["unique_code"]
-        fields = {name: reader.restore_value(value) for name, value in source.items()}
-        for ingredient in fields["ingredients"]:
-            instance.add_ingredient(ingredient)
-        self.fill_fields(instance, fields)
+        self.restore_fields(instance, header)
+        details = {
+            name: reader.restore_value(value)
+            for name, value in source.items()
+            if name not in header and name not in self.computed_fields
+        }
+        instance.apply_fields(details)
         return instance
 
     def check(self, instance: recipe_model, node: dict) -> None:
-        """Сверяет расчётные свойства только после заполнения всего графа."""
+        """Сверяет расчётные свойства после заполнения всего графа."""
         fields = node["$fields"]
         for name in self.computed_fields & fields.keys():
             if getattr(instance, name) != fields[name]:

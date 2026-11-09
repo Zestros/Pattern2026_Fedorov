@@ -103,7 +103,7 @@ def test_inherited_fields_reference_convertor_convert_group():
 
     # Проверка
     assert result == {
-        "group": {"$id": "1", "$type": "group_model", "$fields": {
+        "group": {"$id": "1", "$type": "Src.Models.group_model.group_model", "$fields": {
             "name": "Бакалея", "unique_code": group.unique_code,
         }},
     }
@@ -126,7 +126,7 @@ def test_public_fields_reference_convertor_convert_instance_attributes():
     }
 
 
-def test_nested_values_reference_convertor_convert_without_factory():
+def test_nested_values_reference_convertor_convert_without_factory(declare_fields):
     """
     <summary>
     Конвертор без фабрики обрабатывает простые поля, дату, доменную модель,
@@ -134,6 +134,7 @@ def test_nested_values_reference_convertor_convert_without_factory():
     </summary>
     """
     # Подготовка
+    declare_fields(group_model, 'quantity', 'created_at', 'group', 'rows', 'details')
     group = group_model.create_grocery()
     created_at = datetime(2026, 10, 22, 18, 30, tzinfo=timezone(timedelta(hours=8)))
     source = group_model("Мука")

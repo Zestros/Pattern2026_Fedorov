@@ -47,6 +47,16 @@ class storage_manager(abstract_manager):
         self.convert()
         self.__initialized = True
 
+    @classmethod
+    def initialize_empty(cls, instance: "storage_manager") -> None:
+        """Инициализирует выделенное хранилище без стартовых данных и смены Singleton."""
+        if type(instance) is not cls:
+            raise arguments_exception("instance", "Ожидается экземпляр хранилища")
+        settings = settings_model()
+        settings.first_start = False
+        instance.__initialized = False
+        cls.__init__(instance, settings)
+
     @property
     def warehouses(self) -> tuple[warehouse_model, ...]:
         """Возвращает склады без возможности менять состав коллекции."""

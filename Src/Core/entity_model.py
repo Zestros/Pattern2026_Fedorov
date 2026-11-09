@@ -8,6 +8,9 @@ class entity_model(abstract_model):
     "Наименование сущности."
     __name:str = ""
 
+    # Публичные поля состояния
+    state_fields: tuple[str, ...] = ("name",)
+
     @property
     def name(self) -> str:
         """Возвращает наименование сущности."""

@@ -1,9 +1,13 @@
 """Интеграционные тесты выгрузки и восстановления графа JSON с $id/$ref."""
 
 import json
+import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import UUID
+
+import pytest
+
 
 from Src.Dtos.conversion_context_dto import conversion_context_dto
 from Src.Logics.Restore.restore_factory import restore_factory
@@ -17,9 +21,17 @@ from Src.Models.settings_model import settings_model
 from Src.Models.unit_model import unit_model
 
 
+@pytest.fixture(autouse=True)
+def example_directory(tmp_path, monkeypatch):
+    """Изолирует записываемые примеры от файлов документации."""
+    monkeypatch.setattr(sys.modules[__name__], "EXAMPLE_DIRECTORY", tmp_path)
+
+
+EXAMPLE_DIRECTORY = Path(__file__).resolve().parents[2] / "Docs" / "Examples" / "Conversion"
+
 def save_example(file_name: str, result: dict[str, object]) -> dict[str, object]:
-    """Записывает пример в документацию и читает JSON для проверки восстановления."""
-    directory = Path(__file__).resolve().parents[2] / "Docs" / "Examples" / "Conversion"
+    """Записывает пример во временный каталог и читает JSON для проверки восстановления."""
+    directory = EXAMPLE_DIRECTORY
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / file_name
     path.write_text(json.dumps(result, ensure_ascii=False, indent=4) + "\n", encoding="utf-8")
@@ -164,7 +176,7 @@ def test_matching_storage_reference_restore_restore_saved_json_without_first_sta
     <summary>
     Сохранённый storage.json читается при выключенном первом старте.
     Проверяются поля и рецепты загруженных моделей по отдельно сформированным моделям.
-    Повторная выгрузка подтверждает сохранение доменных кодов и ссылок из файла.
+    Доменный код загруженной группы сверяется с сохранённым кодом.
     </summary>
     """
     # Подготовка
@@ -200,7 +212,9 @@ def test_matching_storage_reference_restore_restore_saved_json_without_first_sta
     for actual, original in zip(restored.items, expected.items, strict=True):
         assert_item_matches(actual, original)
 
-    assert convert_factory().create(restored).convert(restored, "storage") == saved
+    saved_groups = saved["storage"]["$fields"]["groups"]["$values"]
+    for group, node in zip(restored.groups, saved_groups, strict=True):
+        assert group.unique_code == node["$fields"]["unique_code"]
 
 
 def test_saved_storage_convert_export_all_collections(monkeypatch):

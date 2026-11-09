@@ -17,6 +17,9 @@ class company_model(entity_model):
     # Форма собственности в обозначении, принятом в задании.
     __ownership_form: str
 
+    # Публичные поля состояния; вычисляемые значения не добавляются автоматически.
+    state_fields: tuple[str, ...] = ("inn", "bik", "account", "ownership_form")
+
     def __init__(
         self,
         name: str,

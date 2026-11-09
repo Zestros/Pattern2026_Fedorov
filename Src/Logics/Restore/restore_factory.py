@@ -1,5 +1,6 @@
 from threading import Lock
 
+from Src.Core.abstract_model import abstract_model
 from Src.Core.abstract_restore_handler import abstract_restore_handler
 from Src.Core.exception import arguments_exception
 from Src.Logics.Restore.model_restore import model_restore
@@ -23,7 +24,7 @@ class restore_factory:
                 cls.__instance = instance
             return cls.__instance
 
-    def add_model(self, model_type: type) -> None:
+    def add_model(self, model_type: type[abstract_model]) -> None:
         """Регистрирует модель с общим обработчиком."""
         self.add_handler(model_restore(model_type))
 

@@ -64,7 +64,7 @@ def test_self_reference_reference_convertor_convert_base_unit():
     result = convertor.convert(gram, "unit")["unit"]
     # Проверка
     assert result == {
-        "$id": "1", "$type": "unit_model", "$fields": {
+        "$id": "1", "$type": "Src.Models.unit_model.unit_model", "$fields": {
             "name": "грамм", "coefficient": 1,
             "unique_code": gram.unique_code, "base_unit": {"$ref": "1"},
         },
@@ -96,9 +96,10 @@ def test_shared_base_reference_convertor_convert_independent_branches():
 
 
 @pytest.mark.parametrize("kind", ["list", "dict", "group", "model", "unit", "mixed"])
-def test_restored_cycle_reference_convertor_convert_supported_graph(kind):
+def test_restored_cycle_reference_convertor_convert_supported_graph(kind, declare_fields):
     """<summary>Циклы списков, словарей и известных объектов восстанавливаются по идентичности.</summary>"""
     # Подготовка
+    declare_fields(abstract_model, 'link')
     if kind == "list":
         source = []
         source.append(source)
@@ -133,9 +134,10 @@ def test_restored_cycle_reference_convertor_convert_supported_graph(kind):
             assert restored.base_unit is restored
 
 
-def test_identity_tracking_reference_convertor_convert_equal_codes():
+def test_identity_tracking_reference_convertor_convert_equal_codes(declare_fields):
     """<summary>Разные экземпляры с одинаковым доменным кодом имеют разные служебные ID.</summary>"""
     # Подготовка
+    declare_fields(abstract_model, 'link')
     first = abstract_model()
     second = abstract_model()
     second.unique_code = first.unique_code

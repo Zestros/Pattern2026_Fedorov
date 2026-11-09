@@ -8,6 +8,9 @@ from Src.Models.unit_model import unit_model
 class recipe_ingredient_model(abstract_model):
     """Строка состава: продукт, количество и назначение в текущей карте."""
 
+    # Публичные поля состояния; вычисляемые значения не добавляются автоматически.
+    state_fields: tuple[str, ...] = ("item", "quantity", "is_packaging")
+
     def __init__(
         self, item: abstract_recipe_component, quantity: int | float,
         is_packaging: bool = False,

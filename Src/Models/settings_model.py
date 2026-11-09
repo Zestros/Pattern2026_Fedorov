@@ -3,7 +3,10 @@ from Src.Core.abstract_model import abstract_model
 from Src.Models.company_model import company_model
 from Src.Core.validator import validator
 
+
 class settings_model(abstract_model):
+    """Хранит настройки организации, первого запуска и формата отчётов."""
+
     # Карточка организации
     __company: company_model | None = None
     # Наименование директора
@@ -12,6 +15,15 @@ class settings_model(abstract_model):
     __account_name: str = ""
     # Флаг первого старта
     __first_start: bool = True
+
+    # Публичные поля состояния; вычисляемые значения не добавляются автоматически.
+    state_fields: tuple[str, ...] = (
+        "company",
+        "boss_name",
+        "account_name",
+        "first_start",
+        "response_format",
+    )
 
     @property
     def company(self) -> company_model | None:
@@ -51,10 +63,12 @@ class settings_model(abstract_model):
 
     @property
     def first_start(self) -> bool:
+        """Возвращает признак заполнения стартовыми данными."""
         return self.__first_start
 
     @first_start.setter
     def first_start(self, value: bool) -> None:
+        """Устанавливает признак первого запуска."""
         validator.validate(value, bool, field="first_start")
         self.__first_start = value
 
