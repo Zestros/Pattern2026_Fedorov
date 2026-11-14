@@ -61,14 +61,25 @@ class unit_model(entity_model):
                     "Базовая единица должна быть моделью единицы измерения",
                 )
 
-            if base_unit.base_unit is not base_unit:
-                raise arguments_exception(
-                    "base_unit",
-                    "Нельзя использовать производную единицу как базовую",
-                )
-
         self.__coefficient = coefficient
         self.__base_unit = base_unit
+        self.validate_base_unit()
+
+    def validate_base_unit(self) -> None:
+        """Проверяет, что единица ссылается на базовую, в том числе на саму себя."""
+        if self.base_unit.base_unit is not self.base_unit:
+            raise arguments_exception("base_unit", "Нельзя использовать производную единицу как базовую")
+
+    def validate_state(self) -> None:
+        """Проверяет изменяемую связь с базовой единицей."""
+        self.validate_base_unit()
+
+    def updated_copy(self, fields: dict[str, object]) -> Self:
+        """Принимает null как переход к базовой единице при обновлении."""
+        self.validate_fields(fields)
+        if "base_unit" in fields and fields["base_unit"] is None:
+            fields = {**fields, "base_unit": self}
+        return super().updated_copy(fields)
 
     @classmethod
     def from_fields(

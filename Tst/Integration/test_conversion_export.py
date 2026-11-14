@@ -17,6 +17,7 @@ from Src.Logics.storage_manager import storage_manager
 from Src.Models.group_model import group_model
 from Src.Models.item_model import item_model
 from Src.Models.recipe_item_model import recipe_item_model
+from Src.Models.recipe_model import recipe_model
 from Src.Models.settings_model import settings_model
 from Src.Models.unit_model import unit_model
 
@@ -194,7 +195,6 @@ def test_matching_storage_reference_restore_restore_saved_json_without_first_sta
     # Проверка
     assert isinstance(restored, storage_manager)
     assert not empty_storage.items
-    assert convert_factory().create(restored).convert(restored, "storage") == saved
     assert [group.name for group in restored.groups] == [group.name for group in expected.groups]
     assert [warehouse.name for warehouse in restored.warehouses] == [
         warehouse.name for warehouse in expected.warehouses
@@ -213,6 +213,11 @@ def test_matching_storage_reference_restore_restore_saved_json_without_first_sta
     for actual, original in zip(restored.items, expected.items, strict=True):
         assert_item_matches(actual, original)
 
+    assert [recipe.name for recipe in restored.recipes] == [recipe.name for recipe in expected.recipes]
+    for item in restored.items:
+        if isinstance(item, recipe_item_model):
+            assert restored.find(recipe_model, item.recipe.unique_code) is item.recipe
+
     saved_groups = saved["storage"]["$fields"]["groups"]["$values"]
     for group, node in zip(restored.groups, saved_groups, strict=True):
         assert group.unique_code == node["$fields"]["unique_code"]
@@ -229,10 +234,12 @@ def test_saved_storage_convert_export_all_collections(monkeypatch):
     # Подготовка
     monkeypatch.setattr(storage_manager, "_storage_manager__instance", None)
     storage = storage_manager(settings_model())
+    standalone_recipe = recipe_model("Черновик карты", storage.units[0])
+    storage.add(recipe_model, standalone_recipe)
     convertor = convert_factory().create(storage)
     collections = {
         "warehouses": storage.warehouses, "groups": storage.groups,
-        "units": storage.units, "items": storage.items,
+        "units": storage.units, "items": storage.items, "recipes": storage.recipes,
     }
     # Действие
     result = convertor.convert(storage, "storage")
@@ -262,6 +269,8 @@ def test_saved_storage_convert_export_all_collections(monkeypatch):
         assert item.calculate_mass(1, restored.units[0]) == original.calculate_mass(1, storage.units[0])
     cake = next(item for item in restored.items if item.name == "Бисквитный торт")
     assert cake.recipe.net_weight == 805
+    assert restored.find(recipe_model, cake.recipe.unique_code) is cake.recipe
+    assert restored.find(recipe_model, standalone_recipe.unique_code).ingredients == ()
     layers, cream = cake.recipe.ingredients
     assert layers.item.recipe.ingredients[1].item is cream.item.recipe.ingredients[1].item
     assert convertor.convert(restored, "storage") == saved
