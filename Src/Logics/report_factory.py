@@ -45,6 +45,9 @@ class report_factory(abstract_report_factory):
 
         return self.__mapping[report_type]()
 
+    def formats(self) -> tuple[report_type_enum, ...]:
+        """Возвращает форматы, для которых зарегистрированы построители."""
+        return tuple(self.__mapping)
 
     def create_default(self) -> abstract_report:
         """Создаёт построитель по текущему значению сохранённых настроек."""

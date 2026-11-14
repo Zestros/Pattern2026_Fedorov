@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 
 from Src.Core.exception import arguments_exception
-from Src.Dtos.restoration_context_dto import restoration_context_dto, tuple_reference_dto
+from Src.Dtos.restoration_context_dto import restoration_context_dto
+from Src.Dtos.tuple_reference_dto import tuple_reference_dto
 
 
 class abstract_restore_handler(ABC):

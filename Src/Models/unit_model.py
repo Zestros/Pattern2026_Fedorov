@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from typing import Self
 from Src.Core.validator import validator
 from Src.Core.entity_model import entity_model
 from Src.Core.exception import arguments_exception
@@ -60,14 +61,37 @@ class unit_model(entity_model):
                     "Базовая единица должна быть моделью единицы измерения",
                 )
 
-            if base_unit.base_unit is not base_unit:
-                raise arguments_exception(
-                    "base_unit",
-                    "Нельзя использовать производную единицу как базовую",
-                )
-
         self.__coefficient = coefficient
         self.__base_unit = base_unit
+        self.validate_base_unit()
+
+    def validate_base_unit(self) -> None:
+        """Проверяет, что единица ссылается на базовую, в том числе на саму себя."""
+        if self.base_unit.base_unit is not self.base_unit:
+            raise arguments_exception("base_unit", "Нельзя использовать производную единицу как базовую")
+
+    def validate_state(self) -> None:
+        """Проверяет изменяемую связь с базовой единицей."""
+        self.validate_base_unit()
+
+    def updated_copy(self, fields: dict[str, object]) -> Self:
+        """Принимает null как переход к базовой единице при обновлении."""
+        self.validate_fields(fields)
+        if "base_unit" in fields and fields["base_unit"] is None:
+            fields = {**fields, "base_unit": self}
+        return super().updated_copy(fields)
+
+    @classmethod
+    def from_fields(
+        cls, fields: dict[str, object], *, instance: Self | None = None,
+    ) -> Self:
+        """Инициализирует базовую единицу с сохранением ссылки на себя."""
+        base = fields["base_unit"]
+        if base is None:
+            raise arguments_exception("base_unit", "Ожидается восстановленная базовая единица")
+        if base is instance:
+            fields = {**fields, "base_unit": None}
+        return super().from_fields(fields, instance=instance)
 
     @property
     def coefficient(self) -> int | float:

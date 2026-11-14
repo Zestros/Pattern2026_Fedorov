@@ -11,6 +11,10 @@ from Src.Models.unit_model import unit_model
 class recipe_model(entity_model):
     """Карта: брутто до обработки, пищевое нетто после обработки и упаковка."""
 
+    # Заполнение структурных свойств
+    state_fields = ("ingredients",)
+    computed_fields = ("packaging_weight", "gross_weight", "net_weight")
+
     def __init__(
         self, name: str, mass_unit: unit_model,
         mass_coefficient: int | float = 1,
@@ -26,6 +30,24 @@ class recipe_model(entity_model):
         self.__mass_coefficient = mass_coefficient
         # Коллекцию можно изменять только через методы карты.
         self.__ingredients: list[recipe_ingredient_model] = []
+
+    @classmethod
+    def validate_restore_fields(cls, fields: dict[str, object]) -> None:
+        """Проверяет, что сохранённый рецепт содержит коллекцию строк."""
+        super().validate_restore_fields(fields)
+        if "ingredients" not in fields:
+            raise arguments_exception("ingredients", "В рецепте должны быть указаны строки")
+
+    def apply_fields(self, fields: dict[str, object]) -> None:
+        """Заполняет свойства и добавляет строки с проверкой вложенности карты."""
+        self.validate_fields(fields)
+        remaining = fields.copy()
+        ingredients = remaining.pop("ingredients", ())
+        validator.validate(ingredients, (list, tuple), field="ingredients")
+        for ingredient in ingredients:
+            validator.validate(ingredient, recipe_ingredient_model, field="ingredients")
+            self.add_ingredient(ingredient)
+        super().apply_fields(remaining)
 
     @property
     def mass_unit(self) -> unit_model:
@@ -47,6 +69,7 @@ class recipe_model(entity_model):
         quantity: int | float | None = None, *, is_packaging: bool = False,
     ) -> recipe_ingredient_model:
         """Создаёт строку либо принимает готовую; проверяет циклы до добавления."""
+        self._ensure_editable()
         validator.validate(is_packaging, bool, field="is_packaging")
         if isinstance(item, recipe_ingredient_model):
             if quantity is not None or is_packaging:
@@ -68,8 +91,14 @@ class recipe_model(entity_model):
         for ingredient in self.__ingredients:
             ingredient.validate_recipe_path(next_path)
 
+    def validate_state(self) -> None:
+        """Проверяет вложенность и совместимость единиц при расчёте массы."""
+        self.validate_recipe_path(set())
+        _ = self.gross_weight
+
     def remove_ingredient(self, ingredient: recipe_ingredient_model) -> None:
         """Удаляет конкретную строку, не затрагивая другие строки того же продукта."""
+        self._ensure_editable()
         validator.validate(ingredient, recipe_ingredient_model, field="ingredient")
         for index, row in enumerate(self.__ingredients):
             if row is ingredient:

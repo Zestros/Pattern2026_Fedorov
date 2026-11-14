@@ -1,9 +1,8 @@
-from Src.Core.report_type_enum import report_type_enum
 from Src.Core.abstract_manager import abstract_manager
-import json
+from Src.Core.exception import arguments_exception
 from Src.Core.validator import validator, operation_exception
+from Src.Logics.reference_restore import reference_restore
 from Src.Models.settings_model import settings_model
-from Src.Models.company_model import company_model
 
 class setting_manager(abstract_manager):
     __default_file_name: str = 'settings.json'
@@ -15,29 +14,29 @@ class setting_manager(abstract_manager):
             cls.instance = super(setting_manager, cls).__new__(cls)
         return cls.instance
 
-    def load(self, file_name = ""):
-        inner_file_name = file_name if file_name.strip() != "" else self.__default_file_name
-        validator.validate(inner_file_name, str)
-
+    def load(self, file_name: str = "") -> None:
+        """Читает JSON и публикует настройки после успешного восстановления."""
+        if not isinstance(file_name, str):
+            raise arguments_exception("file_name", "Ожидается имя файла")
+        inner_file_name = file_name if file_name.strip() else self.__default_file_name
         try:
-            with open(inner_file_name, "r") as file:
-                self._data = json.load(file)
-        except Exception as ec:
-            raise operation_exception(
-                "Не удалось загрузить файл настроек"
-            )
+            self._data = reference_restore.read_json(inner_file_name)
+        except (OSError, ValueError) as error:
+            raise operation_exception("Не удалось загрузить файл настроек") from error
 
         self._is_loaded = self.convert()
 
     @property
     def settings(self) -> settings_model:
+        """Возвращает последнюю успешно загруженную модель настроек."""
         return self.__settings
 
     def convert(self) -> bool:
         """Преобразует исходные данные в модель настроек."""
         try:
             data = self._data
-
+            validator.validate(data, dict, field="settings")
+            # Поля, которые требует файл настроек приложения.
             required_fields = (
                 "company",
                 "boss_name",
@@ -50,28 +49,10 @@ class setting_manager(abstract_manager):
                     raise operation_exception(
                         f"Отсутствует обязательное поле: {field}"
                     )
+                if data[field] is None:
+                    raise arguments_exception(field, "Ожидается значение поля")
 
-            settings = settings_model()
-            settings.company = company_model(**data["company"])
-            settings.boss_name = data["boss_name"]
-            settings.account_name = data["account_name"]
-            settings.first_start = data["first_start"]
-
-            raw_format = data.get("response_format", "TXT")
-            if not isinstance(raw_format, str):
-                raise operation_exception("response_format должен быть строкой")
-            try:
-                settings.response_format = report_type_enum[raw_format.strip().upper()]
-            except KeyError as error:
-                raise operation_exception(
-                    f"Неизвестный response_format: {raw_format}"
-                ) from error
-
-            self.__settings = settings
+            self.__settings = reference_restore().restore_model(data, settings_model)
             return True
-        except operation_exception:
-            raise
-        except Exception as error:
-            raise operation_exception(
-                "Не удалось преобразовать настройки"
-            )
+        except arguments_exception as error:
+            raise operation_exception(f"Не удалось преобразовать настройки. {error}") from error

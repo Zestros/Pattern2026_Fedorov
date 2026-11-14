@@ -1,6 +1,10 @@
 """Юнит-тесты менаджера настроек."""
+import json
+
 import pytest
 
+from Src.Core.report_type_enum import report_type_enum
+from Src.Logics.Restore.restore_factory import restore_factory
 from Src.Logics.settings_manager import setting_manager
 from Src.Core.validator import operation_exception
 from Src.Models.company_model import company_model
@@ -137,6 +141,46 @@ def test_created_settings_convert_valid_data(settings_data, first_start):
     assert manager.settings.boss_name == settings_data["boss_name"]
     assert manager.settings.account_name == settings_data["account_name"]
     assert manager.settings.first_start is first_start
+    assert manager.settings.response_format is report_type_enum.TXT
+
+
+def test_deserialized_models_setting_manager_load_utf8_json(settings_data, tmp_path, monkeypatch):
+    """<summary>Общая фабрика восстанавливает настройки, организацию и формат отчёта из UTF-8 файла.</summary>"""
+    # Подготовка
+    path = tmp_path / "settings.json"
+    settings_data["response_format"] = " markdown "
+    path.write_text(json.dumps(settings_data, ensure_ascii=False), encoding="utf-8")
+    manager = setting_manager()
+    restored_types = set()
+    original_create = restore_factory.create
+
+    def track_restore_handler(factory, node):
+        """Запоминает типы, для которых десериализатор запросил обработчики."""
+        restored_types.add(node["$type"])
+        return original_create(factory, node)
+
+    monkeypatch.setattr(restore_factory, "create", track_restore_handler)
+
+    # Действие
+    manager.load(str(path))
+
+    # Проверка
+    assert isinstance(manager.settings.company, company_model)
+    assert manager.settings.company.name == "Ромашка"
+    assert manager.settings.response_format is report_type_enum.MARKDOWN
+    assert restored_types == {settings_model.type_name(), company_model.type_name(), report_type_enum.__name__}
+
+    # Подготовка
+    settings_data["response_format"] = "PDF"
+    path.write_text(json.dumps(settings_data), encoding="utf-8")
+    previous = manager.settings
+
+    # Действие
+    with pytest.raises(operation_exception, match="response_format"):
+        manager.load(str(path))
+
+    # Проверка
+    assert manager.settings is previous
 
 
 @pytest.mark.parametrize(

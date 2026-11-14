@@ -1,7 +1,8 @@
 """Проверки сервиса отчётов без HTTP и общего результата."""
 import pytest
 
-from Src.Core.entity_type_enum import entity_type_enum
+from Src.Models.unit_model import unit_model
+from Src.Models.item_model import item_model
 from Src.Core.report_type_enum import report_type_enum
 from Src.Dtos.report_data_dto import report_data_dto
 from Src.Logics.report_factory import report_factory
@@ -22,8 +23,8 @@ def test_correct_result_service_explicit_and_default(monkeypatch, format_):
     unit = storage.units[0]
     service = report_service(storage, report_source_factory(), report_factory(settings))
     # Действие
-    explicit = service.build(entity_type_enum.UNIT, unit.unique_code, format_)
-    default = service.build_default(entity_type_enum.UNIT, unit.unique_code)
+    explicit = service.build(unit_model, unit.unique_code, format_)
+    default = service.build_default(unit_model, unit.unique_code)
     # Проверка
     assert explicit == default
     content = explicit.content.decode() if isinstance(explicit.content, bytes) else explicit.content
@@ -39,7 +40,7 @@ def test_not_found_service_missing_entity(monkeypatch):
     service = report_service(storage_manager(settings), report_source_factory(), report_factory(settings))
     # Действие и Проверка
     with pytest.raises(report_not_found_exception):
-        service.build_default(entity_type_enum.ITEM, "missing")
+        service.build_default(item_model, "missing")
 
 
 @pytest.mark.parametrize("format_", list(report_type_enum))
