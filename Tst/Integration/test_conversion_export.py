@@ -194,6 +194,7 @@ def test_matching_storage_reference_restore_restore_saved_json_without_first_sta
     # Проверка
     assert isinstance(restored, storage_manager)
     assert not empty_storage.items
+    assert convert_factory().create(restored).convert(restored, "storage") == saved
     assert [group.name for group in restored.groups] == [group.name for group in expected.groups]
     assert [warehouse.name for warehouse in restored.warehouses] == [
         warehouse.name for warehouse in expected.warehouses

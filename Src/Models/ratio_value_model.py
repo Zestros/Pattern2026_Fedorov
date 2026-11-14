@@ -7,9 +7,6 @@ from Src.Models.unit_model import unit_model
 class ratio_value_model(abstract_model):
     """Положительная характеристика с единицами: плотность или масса штуки."""
 
-    # Публичные поля состояния; вычисляемые значения не добавляются автоматически.
-    state_fields: tuple[str, ...] = ("value", "unit")
-
     def __init__(self, value: int | float, unit: ratio_unit_model) -> None:
         """Сохраняет положительное значение вместе с составной единицей."""
         super().__init__()

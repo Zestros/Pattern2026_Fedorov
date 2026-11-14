@@ -3,9 +3,57 @@
 import pytest
 
 from Src.Core.exception import arguments_exception
+from Src.Logics.Restore.restore_factory import restore_factory
 from Src.Logics.convert_factory import convert_factory
 from Src.Logics.reference_restore import reference_restore
 from Src.Models.group_model import group_model
+
+
+class labeled_group_model(group_model):
+    """Тестовая группа с полями конструктора и унаследованным сеттером name."""
+
+    def __init__(self, name: str, label: str) -> None:
+        """Сохраняет обязательную метку, которую нельзя менять после создания."""
+        super().__init__(name)
+        self.__label = label
+        self.__note = ""
+
+    @property
+    def label(self) -> str:
+        """Возвращает метку конструктора."""
+        return self.__label
+
+    @property
+    def note(self) -> str:
+        """Возвращает необязательную заметку."""
+        return self.__note
+
+    @note.setter
+    def note(self, value: str) -> None:
+        """Проверяет тип заметки при присваивании."""
+        if not isinstance(value, str):
+            raise arguments_exception("note", "Ожидается текст заметки")
+        self.__note = value
+
+
+def test_discovered_fields_reference_restore_new_registered_model(monkeypatch):
+    """<summary>После регистрации типа маппинг сам находит поля конструктора и свойства с сеттерами.</summary>"""
+    monkeypatch.setattr(restore_factory, "_restore_factory__instance", None)
+    restore_factory().add_model(labeled_group_model)
+    source = labeled_group_model("Бакалея", "Продукты")
+    source.note = "Основная группа"
+    data = convert_factory().create(source).convert(source)
+
+    restored = reference_restore().restore(data)
+
+    assert type(restored) is labeled_group_model
+    assert restored.unique_code == source.unique_code
+    assert restored.name == source.name
+    assert restored.label == source.label
+    assert restored.note == source.note
+    data["value"]["$fields"]["note"] = 42
+    with pytest.raises(arguments_exception, match="Ожидается текст заметки"):
+        reference_restore().restore(data)
 
 
 def test_preserved_model_reference_restore_new_computed_property(monkeypatch):
@@ -55,11 +103,18 @@ def test_arguments_exception_reference_restore_short_model_type():
 
 
 def test_preserved_optional_field_from_fields_missing_value(monkeypatch):
-    """<summary>Новое объявленное поле с начальным значением не делает старый JSON нечитаемым.</summary>"""
+    """<summary>Новое свойство с сеттером и начальным значением совместимо со старым JSON.</summary>"""
+    def get_note(instance):
+        """Возвращает начальное значение для ранее сохранённых моделей."""
+        return getattr(instance, "_note", "")
+
+    def set_note(instance, value):
+        """Сохраняет значение нового свойства."""
+        instance._note = value
+
     source = group_model("Бакалея")
     data = convert_factory().create(source).convert(source)
-    monkeypatch.setattr(group_model, "state_fields", ("note",), raising=False)
-    monkeypatch.setattr(group_model, "note", "", raising=False)
+    monkeypatch.setattr(group_model, "note", property(get_note, set_note), raising=False)
     restored = reference_restore().restore(data)
     assert restored.name == source.name
     assert restored.note == ""

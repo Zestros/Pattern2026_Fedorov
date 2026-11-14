@@ -4,7 +4,7 @@ from Src.Logics.Restore.abstract_object_restore import abstract_object_restore
 
 
 class model_restore(abstract_object_restore):
-    """Поручает создание модели её фабричному методу."""
+    """Собирает модель из полей конструктора и связанных объектов."""
 
     def __init__(self, model_type: type[abstract_model]) -> None:
         """Запоминает зарегистрированный класс и его полное имя."""
@@ -12,15 +12,30 @@ class model_restore(abstract_object_restore):
         self.type_name = model_type.type_name()
 
     def validate(self, node: dict) -> None:
-        """Проверяет наличие сохранённого доменного кода."""
+        """Проверяет допустимые и обязательные поля модели."""
         super().validate(node)
-        self.model_type.validate_fields(node["$fields"])
-        if "unique_code" not in node["$fields"]:
-            raise arguments_exception("unique_code", "В модели должен быть указан доменный код")
+        self.model_type.validate_restore_fields(node["$fields"])
 
     def allocate(self, node: dict) -> abstract_model:
         """Выделяет модель заранее для регистрации ссылок."""
         return self.model_type.__new__(self.model_type)
+
+    def restore(self, instance: abstract_model, node: dict, reader) -> abstract_model:
+        """Инициализирует модель до обхода полей, заполняемых после конструктора."""
+        source = node["$fields"]
+        initial = {
+            name: reader.restore_value(source[name])
+            for name in self.model_type.initial_restore_fields() if name in source
+        }
+        self.restore_fields(instance, initial)
+        remaining = {
+            name: reader.restore_value(value)
+            for name, value in source.items()
+            if name not in initial and name not in self.model_type.computed_fields
+        }
+        if remaining:
+            instance.apply_fields(remaining)
+        return instance
 
     def restore_fields(
         self, instance: abstract_model, fields: dict[str, object],
@@ -30,3 +45,7 @@ class model_restore(abstract_object_restore):
         if result is not instance:
             raise arguments_exception("instance", "Фабричный метод должен заполнить выделенный экземпляр")
         return result
+
+    def check(self, instance: abstract_model, node: dict) -> None:
+        """Поручает модели сверку расчётных значений после связывания графа."""
+        instance.check_computed_fields(node["$fields"])

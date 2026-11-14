@@ -10,9 +10,6 @@ from Src.Core.exception import arguments_exception
 class recipe_item_model(item_model):
     """Составной продукт с картой; для штучного выхода задаётся размер партии."""
 
-    # Публичные поля состояния; вычисляемые значения не добавляются автоматически.
-    state_fields: tuple[str, ...] = ("recipe", "output_quantity")
-
     def __init__(
         self,
         name: str,

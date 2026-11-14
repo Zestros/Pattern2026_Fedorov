@@ -1,5 +1,5 @@
 from abc import ABC
-from inspect import Parameter, signature
+from inspect import Parameter, getmembers_static, signature
 from typing import Self
 import uuid
 
@@ -13,8 +13,10 @@ class abstract_model(ABC):
     # Уникальный код модели.
     __unique_code: str
 
-    # Публичные поля состояния
-    state_fields: tuple[str, ...] = ("unique_code",)
+    # Дополнительные поля, восстанавливаемые по правилам конкретной модели.
+    state_fields: tuple[str, ...] = ()
+    # Расчётные свойства, сохранённые в JSON для сверки после сборки графа.
+    computed_fields: tuple[str, ...] = ()
 
     def __init__(self) -> None:
         """Создаёт уникальный код модели."""
@@ -57,11 +59,19 @@ class abstract_model(ABC):
 
     @classmethod
     def field_names(cls) -> tuple[str, ...]:
-        """Объединяет явно объявленные поля модели и её предков."""
-        return tuple(dict.fromkeys(
-            name for base in reversed(cls.__mro__)
+        """Находит свойства с сеттером или параметром конструктора без вызова геттеров."""
+        constructor_fields = cls.constructor_fields()
+        properties = {
+            name for name, descriptor in getmembers_static(cls)
+            if not name.startswith("_") and isinstance(descriptor, property)
+            and descriptor.fget is not None
+            and (descriptor.fset is not None or name in constructor_fields)
+        }
+        additional_fields = {
+            name for base in cls.__mro__
             for name in base.__dict__.get("state_fields", ())
-        ))
+        }
+        return tuple(sorted(properties | additional_fields | set(cls.computed_fields)))
 
     @classmethod
     def validate_fields(cls, fields: dict[str, object]) -> None:
@@ -74,13 +84,29 @@ class abstract_model(ABC):
                 raise arguments_exception(str(name), "Неизвестное поле модели")
 
     @classmethod
-    def constructor_fields(cls) -> tuple[str, ...]:
-        """Возвращает имена параметров, которые конструктор принимает по ключу."""
+    def constructor_fields(cls, *, required_only: bool = False) -> tuple[str, ...]:
+        """Возвращает имена именованных параметров, при необходимости только обязательных."""
         parameters = list(signature(cls.__init__).parameters.values())[1:]
         return tuple(
             parameter.name for parameter in parameters
             if parameter.kind in (Parameter.POSITIONAL_OR_KEYWORD, Parameter.KEYWORD_ONLY)
+            and (not required_only or parameter.default is Parameter.empty)
         )
+
+    @classmethod
+    def validate_restore_fields(cls, fields: dict[str, object]) -> None:
+        """Проверяет состояние сохранённой модели до сборки связанного графа."""
+        cls.validate_fields(fields)
+        if "unique_code" not in fields:
+            raise arguments_exception("unique_code", "В модели должен быть указан доменный код")
+        for name in cls.constructor_fields(required_only=True):
+            if name not in fields:
+                raise arguments_exception(name, "Отсутствует обязательный параметр конструктора")
+
+    @classmethod
+    def initial_restore_fields(cls) -> tuple[str, ...]:
+        """Возвращает поля конструктора и код для инициализации перед обходом связей."""
+        return (*cls.constructor_fields(), "unique_code")
 
     @classmethod
     def from_fields(
@@ -98,13 +124,20 @@ class abstract_model(ABC):
         remaining = {name: value for name, value in fields.items() if name not in arguments}
         if "unique_code" in remaining:
             instance.unique_code = remaining.pop("unique_code")
-        instance.apply_fields(remaining)
+        if remaining:
+            instance.apply_fields(remaining)
         return instance
 
     def apply_fields(self, fields: dict[str, object]) -> None:
         """Заполняет свойства, которые можно установить после конструктора."""
         self.validate_fields(fields)
         set_public_fields(self, fields)
+
+    def check_computed_fields(self, fields: dict[str, object]) -> None:
+        """Сверяет сохранённые расчётные значения с восстановленной моделью."""
+        for name in self.computed_fields:
+            if name in fields and getattr(self, name) != fields[name]:
+                raise arguments_exception(name, "Расчётное поле не соответствует восстановленной модели")
 
     def __eq__(self, other):
         """Сравнивает модели по коду; прочие типы не поддерживает."""

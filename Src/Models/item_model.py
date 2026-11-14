@@ -20,9 +20,6 @@ class item_model(entity_model, abstract_recipe_component):
     # Единица измерения номенклатуры.
     __unit: unit_model
 
-    # Публичные поля состояния; вычисляемые значения не добавляются автоматически.
-    state_fields: tuple[str, ...] = ("full_name", "group", "unit", "mass_ratio")
-
     def __init__(
         self,
         name: str,

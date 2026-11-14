@@ -1,0 +1,75 @@
+openapi: 3.0.0
+info:
+  title: Main API
+  version: "1.0"
+  description: API "ООО <Ромашка>"
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /api/get_default_report:
+    get:
+      summary: Получить отчет по сущности
+      description: Генерирует отчет для конкретного объекта по его уникальному коду.
+      operationId: main.get_default_report
+      parameters:
+        - name: entity
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Ключ сущности (например, nomenclature_model, group_model).
+        - name: unique_code
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Уникальный код конкретного объекта.
+      responses:
+        '200':
+          description: Успешно сгенерированный отчет.
+          content:
+            text/plain: 
+              schema:
+                type: string
+        '400':
+          description: Ошибка в параметрах запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                detail: "Ошибка: Отсутствует параметр entity"
+        '500':
+          description: Внутренняя ошибка сервера.
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "Ошибка: Невозможно получить требуемый отчет!"
+
+  /api/get_entities:
+    get:
+      summary: Получить список доменных сущностей
+      description: Возвращает список всех доступных ключей (типов моделей), которые есть в хранилище.
+      operationId: main.get_entities
+      responses:
+        '200':
+          description: Список ключей сущностей в формате JSON.
+          content:
+            text/json: 
+              schema:
+                type: array
+                items:
+                  type: string
+              example: ["range_model", "group_model", "storage_model", "nomenclature_model", "receipt_model"]
+        '500':
+          description: Внутренняя ошибка сервера.
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                detail: "Ошибка: Невозможно получить список доменных сущностей!"

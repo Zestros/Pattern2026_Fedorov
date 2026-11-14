@@ -6,7 +6,6 @@ from Src.Logics.Restore.datetime_restore import datetime_restore
 from Src.Logics.Restore.dict_restore import dict_restore
 from Src.Logics.Restore.enum_restore import enum_restore
 from Src.Logics.Restore.list_restore import list_restore
-from Src.Logics.Restore.recipe_restore import recipe_restore
 from Src.Logics.Restore.storage_restore import storage_restore
 from Src.Logics.Restore.tuple_restore import tuple_restore
 from Src.Models.company_model import company_model
@@ -35,6 +34,6 @@ def register_restore_handlers(factory) -> None:
     for handler in (
         list_restore(), tuple_restore(), dict_restore(), datetime_restore(),
         enum_restore(report_type_enum), enum_restore(entity_type_enum),
-        recipe_restore(), storage_restore(),
+        storage_restore(),
     ):
         factory.add_handler(handler)

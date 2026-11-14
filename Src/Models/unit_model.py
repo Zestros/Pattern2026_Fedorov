@@ -16,9 +16,6 @@ class unit_model(entity_model):
     # Базовая единица измерения.
     __base_unit: unit_model
 
-    # Публичные поля состояния; вычисляемые значения не добавляются автоматически.
-    state_fields: tuple[str, ...] = ("coefficient", "base_unit")
-
     def __init__(
         self,
         name: str,

@@ -16,15 +16,6 @@ class settings_model(abstract_model):
     # Флаг первого старта
     __first_start: bool = True
 
-    # Публичные поля состояния; вычисляемые значения не добавляются автоматически.
-    state_fields: tuple[str, ...] = (
-        "company",
-        "boss_name",
-        "account_name",
-        "first_start",
-        "response_format",
-    )
-
     @property
     def company(self) -> company_model | None:
         """Возвращает организацию, если она указана."""

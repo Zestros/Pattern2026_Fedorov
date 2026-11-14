@@ -232,6 +232,38 @@ def test_computed_validation_reference_restore_restore_changed_recipe_total():
     assert "Расчётное поле" in str(error.value)
 
 
+def test_arguments_exception_reference_restore_restore_recipe_without_ingredients():
+    """<summary>Общий обработчик отклоняет рецепт без обязательной коллекции строк.</summary>"""
+    source = recipe_model("Пустая карта", unit_model("грамм"))
+    data = convert_factory().create(source).convert(source)
+    del data["value"]["$fields"]["ingredients"]
+
+    with pytest.raises(arguments_exception, match="ingredients"):
+        reference_restore().restore(data)
+
+
+def test_required_field_reference_restore_restore_recipe_without_mass_unit():
+    """<summary>Обязательный параметр mass_unit определяется по сигнатуре конструктора рецепта.</summary>"""
+    source = recipe_model("Пустая карта", unit_model("грамм"))
+    data = convert_factory().create(source).convert(source)
+    del data["value"]["$fields"]["mass_unit"]
+
+    with pytest.raises(arguments_exception, match=r"Поле: mass_unit\nОтсутствует обязательный параметр"):
+        reference_restore().restore(data)
+
+
+def test_default_value_reference_restore_restore_recipe_without_mass_coefficient():
+    """<summary>При отсутствии mass_coefficient используется значение по умолчанию конструктора.</summary>"""
+    source = recipe_model("Пустая карта", unit_model("грамм"))
+    data = convert_factory().create(source).convert(source)
+    del data["value"]["$fields"]["mass_coefficient"]
+
+    restored = reference_restore().restore(data)
+
+    assert restored.mass_coefficient == 1
+    assert restored.ingredients == ()
+
+
 def test_independent_graphs_reference_restore_restore_repeated_calls():
     """<summary>Повторные вызовы одного восстановителя создают независимые графы с теми же кодами.</summary>"""
     # Подготовка

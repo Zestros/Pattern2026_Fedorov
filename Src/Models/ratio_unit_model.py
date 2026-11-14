@@ -8,9 +8,6 @@ from Src.Models.unit_model import unit_model
 class ratio_unit_model(abstract_model):
     """Составная единица: отношение двух единиц общего справочника."""
 
-    # Публичные поля состояния; вычисляемые значения не добавляются автоматически.
-    state_fields: tuple[str, ...] = ("numerator_unit", "denominator_unit")
-
     def __init__(
         self,
         numerator_unit: unit_model,
