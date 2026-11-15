@@ -37,5 +37,3 @@ class entity_model(abstract_model):
             )
 
         self.__name = name
-
-  

@@ -11,6 +11,10 @@ from Src.Models.unit_model import unit_model
 class recipe_model(entity_model):
     """Карта: брутто до обработки, пищевое нетто после обработки и упаковка."""
 
+    # Заполнение структурных свойств
+    state_fields = ("ingredients",)
+    computed_fields = ("packaging_weight", "gross_weight", "net_weight")
+
     def __init__(
         self, name: str, mass_unit: unit_model,
         mass_coefficient: int | float = 1,
@@ -26,6 +30,22 @@ class recipe_model(entity_model):
         self.__mass_coefficient = mass_coefficient
         # Коллекцию можно изменять только через методы карты.
         self.__ingredients: list[recipe_ingredient_model] = []
+
+    @classmethod
+    def validate_restore_fields(cls, fields: dict[str, object]) -> None:
+        """Проверяет, что сохранённый рецепт содержит коллекцию строк."""
+        super().validate_restore_fields(fields)
+        if "ingredients" not in fields:
+            raise arguments_exception("ingredients", "В рецепте должны быть указаны строки")
+
+    def apply_fields(self, fields: dict[str, object]) -> None:
+        """Заполняет свойства и добавляет строки с проверкой вложенности карты."""
+        self.validate_fields(fields)
+        remaining = fields.copy()
+        ingredients = remaining.pop("ingredients", ())
+        for ingredient in ingredients:
+            self.add_ingredient(ingredient)
+        super().apply_fields(remaining)
 
     @property
     def mass_unit(self) -> unit_model:

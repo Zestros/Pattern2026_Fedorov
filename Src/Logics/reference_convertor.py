@@ -3,6 +3,7 @@ from enum import Enum
 from types import ModuleType
 
 from Src.Core.abstract_convertor import abstract_convertor
+from Src.Core.abstract_model import abstract_model
 from Src.Dtos.conversion_context_dto import conversion_context_dto
 from Src.Logics.basic_convertor import basic_convertor
 from Src.Logics.datetime_convertor import datetime_convertor
@@ -41,6 +42,8 @@ class reference_convertor(abstract_convertor):
     @staticmethod
     def _get_fields(source: object) -> list[str]:
         """Находит публичные атрибуты и унаследованные свойства без их чтения."""
+        if isinstance(source, abstract_model):
+            return sorted(source.field_names())
         names = {
             name for name in dir(type(source))
             if not name.startswith("_")
@@ -65,7 +68,8 @@ class reference_convertor(abstract_convertor):
         identifier = str(len(context.object_ids) + 1)
         context.object_ids[identity] = identifier
         context.objects[identity] = source
-        result = {"$id": identifier, "$type": type(source).__name__}
+        type_name = source.type if isinstance(source, abstract_model) else type(source).__name__
+        result = {"$id": identifier, "$type": type_name}
         if isinstance(source, dict):
             # Пары сохраняют типы ключей и отделяют пользовательские $ref/$id от метаданных.
             result["$items"] = [

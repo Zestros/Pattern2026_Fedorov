@@ -8,10 +8,12 @@ import pytest
 from Src.Core.entity_model import entity_model
 from Src.Core.exception import arguments_exception
 from Src.Core.report_type_enum import report_type_enum
+from Src.Logics.Restore.restore_factory import restore_factory
 from Src.Logics.convert_factory import convert_factory
 from Src.Logics.reference_restore import reference_restore
 from Src.Models.company_model import company_model
 from Src.Models.group_model import group_model
+from Src.Models.recipe_item_model import recipe_item_model
 from Src.Models.recipe_model import recipe_model
 from Src.Models.settings_model import settings_model
 from Src.Models.unit_model import unit_model
@@ -47,7 +49,7 @@ def test_restored_datetime_reference_restore_restore_fold_and_literal_string():
 
 @pytest.mark.parametrize("model_type", [group_model, warehouse_model])
 def test_restored_model_reference_restore_restore_named_model(model_type):
-    """<summary>Группа и склад восстанавливаются в исходный класс с сохранённым кодом.</summary>"""
+    """<summary>Полное имя типа восстанавливает модель с исходным кодом.</summary>"""
     # Подготовка
     source = model_type("Пример")
     data = convert_factory().create(source).convert(source)
@@ -58,6 +60,24 @@ def test_restored_model_reference_restore_restore_named_model(model_type):
     assert restored is not source
     assert restored.name == source.name
     assert restored.unique_code == source.unique_code
+
+
+def test_distinct_types_restore_factory_add_model_same_short_name(monkeypatch):
+    """<summary>Новый класс с тем же коротким именем различается по модулю после одной регистрации.</summary>"""
+    # Подготовка
+    monkeypatch.setattr(restore_factory, "_restore_factory__instance", None)
+    factory = restore_factory()
+    other_group_type = type("group_model", (group_model,), {"__module__": __name__})
+    factory.add_model(other_group_type)
+    source = [group_model("Бакалея"), other_group_type.from_fields({"name": "Овощи"})]
+    data = convert_factory().create(source).convert(source)
+    # Действие
+    restored = reference_restore().restore(data)
+    # Проверка
+    assert type(restored[0]) is group_model
+    assert type(restored[1]) is other_group_type
+    assert [item.name for item in restored] == ["Бакалея", "Овощи"]
+    assert [item.unique_code for item in restored] == [item.unique_code for item in source]
 
 
 def test_restored_settings_reference_restore_restore_company_and_enum():
@@ -96,9 +116,24 @@ def test_restored_defaults_reference_restore_restore_empty_settings():
     assert restored.unique_code == source.unique_code
 
 
-def test_restored_entity_reference_restore_restore_public_self_reference():
+@pytest.mark.parametrize("field, value", [("company", ""), ("boss_name", None), ("account_name", None)])
+def test_arguments_exception_reference_restore_restore_invalid_optional_setting(field, value):
+    """<summary>Неверный тип необязательного значения отклоняется сеттером при восстановлении.</summary>"""
+    # Подготовка
+    source = settings_model()
+    data = convert_factory().create(source).convert(source)
+    data["value"]["$fields"][field] = value
+    # Действие
+    with pytest.raises(arguments_exception) as error:
+        reference_restore().restore(data)
+    # Проверка
+    assert field in str(error.value)
+
+
+def test_restored_entity_reference_restore_restore_public_self_reference(monkeypatch):
     """<summary>Базовая именованная модель сохраняет публичное поле с обратной ссылкой.</summary>"""
     # Подготовка
+    monkeypatch.setattr(entity_model, "state_fields", (*entity_model.state_fields, "link"))
     source = entity_model()
     source.name = "Узел"
     source.link = source
@@ -128,6 +163,7 @@ def test_forward_reference_reference_restore_restore_definition_after_reference(
     ({"$ref": "missing"}, "Неизвестная ссылка"),
     ({"$ref": "1", "name": "unexpected"}, "только строковый $ref"),
     ({"$type": "os.system", "$id": "1", "$fields": {}}, "Неизвестный тип"),
+    ({"$type": group_model.type_name(), "$id": "1", "$fields": {}}, "unique_code"),
     ({"$id": "1", "$type": "list", "$values": [
         {"$id": "1", "$type": "list", "$values": []},
     ]}, "Повторное определение"),
@@ -136,7 +172,10 @@ def test_forward_reference_reference_restore_restore_definition_after_reference(
     ({"$id": "1", "$type": "list", "$values": {}}, "Ожидается массив"),
     ({"$type": "datetime", "$value": "bad date", "$fold": 0}, "Некорректные данные"),
     ({"$type": "datetime", "$value": "2026-10-22", "$fold": 3}, "$fold"),
-    ({"$id": "1", "$type": "SimpleNamespace", "$fields": {"_private": 1}}, "публичные"),
+    (
+        {"$id": "1", "$type": "Src.Models.group_model.group_model", "$fields": {"_private": 1}},
+        "публичные",
+    ),
     ({"$id": "1", "$type": "tuple", "$values": [{"$ref": "1"}]}, "tuple"),
 ])
 def test_arguments_exception_reference_restore_restore_invalid_graph(value, message):
@@ -164,6 +203,22 @@ def test_domain_validation_reference_restore_restore_invalid_unit():
     assert "Коэффициент должен быть больше нуля" in str(error.value)
 
 
+def test_restored_recipe_reference_restore_restore_product_with_back_reference(declare_fields):
+    """<summary>Заголовок карты готов до восстановления продукта, который ссылается обратно на неё.</summary>"""
+    # Подготовка
+    declare_fields(recipe_model, 'product')
+    gram = unit_model("грамм")
+    source = recipe_model("Карта теста", gram)
+    source.product = recipe_item_model("Тесто", "Тесто для лепёшек", group_model("Бакалея"), gram, source)
+    data = convert_factory().create(source).convert(source)
+    # Действие
+    restored = reference_restore().restore(data)
+    # Проверка
+    assert restored.product.recipe is restored
+    assert restored.product.unit is restored.mass_unit
+    assert restored.name == source.name
+
+
 def test_computed_validation_reference_restore_restore_changed_recipe_total():
     """<summary>Расчётная масса не присваивается из JSON; несовпадение с пересчётом отклоняется.</summary>"""
     # Подготовка
@@ -175,6 +230,38 @@ def test_computed_validation_reference_restore_restore_changed_recipe_total():
         reference_restore().restore(data)
     # Проверка
     assert "Расчётное поле" in str(error.value)
+
+
+def test_arguments_exception_reference_restore_restore_recipe_without_ingredients():
+    """<summary>Общий обработчик отклоняет рецепт без обязательной коллекции строк.</summary>"""
+    source = recipe_model("Пустая карта", unit_model("грамм"))
+    data = convert_factory().create(source).convert(source)
+    del data["value"]["$fields"]["ingredients"]
+
+    with pytest.raises(arguments_exception, match="ingredients"):
+        reference_restore().restore(data)
+
+
+def test_required_field_reference_restore_restore_recipe_without_mass_unit():
+    """<summary>Обязательный параметр mass_unit определяется по сигнатуре конструктора рецепта.</summary>"""
+    source = recipe_model("Пустая карта", unit_model("грамм"))
+    data = convert_factory().create(source).convert(source)
+    del data["value"]["$fields"]["mass_unit"]
+
+    with pytest.raises(arguments_exception, match=r"Поле: mass_unit\nОтсутствует обязательный параметр"):
+        reference_restore().restore(data)
+
+
+def test_default_value_reference_restore_restore_recipe_without_mass_coefficient():
+    """<summary>При отсутствии mass_coefficient используется значение по умолчанию конструктора.</summary>"""
+    source = recipe_model("Пустая карта", unit_model("грамм"))
+    data = convert_factory().create(source).convert(source)
+    del data["value"]["$fields"]["mass_coefficient"]
+
+    restored = reference_restore().restore(data)
+
+    assert restored.mass_coefficient == 1
+    assert restored.ingredients == ()
 
 
 def test_independent_graphs_reference_restore_restore_repeated_calls():

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from typing import Self
 from Src.Core.validator import validator
 from Src.Core.entity_model import entity_model
 from Src.Core.exception import arguments_exception
@@ -68,6 +69,18 @@ class unit_model(entity_model):
 
         self.__coefficient = coefficient
         self.__base_unit = base_unit
+
+    @classmethod
+    def from_fields(
+        cls, fields: dict[str, object], *, instance: Self | None = None,
+    ) -> Self:
+        """Инициализирует базовую единицу с сохранением ссылки на себя."""
+        base = fields["base_unit"]
+        if base is None:
+            raise arguments_exception("base_unit", "Ожидается восстановленная базовая единица")
+        if base is instance:
+            fields = {**fields, "base_unit": None}
+        return super().from_fields(fields, instance=instance)
 
     @property
     def coefficient(self) -> int | float:
