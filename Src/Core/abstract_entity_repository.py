@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 
 from Src.Core.entity_model import entity_model
 from Src.Core.exception import arguments_exception
+
 
 
 def validate_entity_type(entity_type: object) -> None:
@@ -38,3 +40,11 @@ class abstract_entity_repository(ABC):
     @abstractmethod
     def delete(self, entity_type: type[entity_model], code: str) -> bool:
         """Удаляет сущность либо возвращает False, если она отсутствует."""
+
+    @abstractmethod
+    def change(
+        self, entity_type: type[entity_model], code: str,
+        prepare: Callable[[entity_model], entity_model],
+    ) -> entity_model | None:
+        """Атомарно готовит и применяет состояние, сохраняя идентичность и откат."""
+        raise NotImplementedError

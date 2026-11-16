@@ -1,3 +1,4 @@
+from Src.Logics.reference_graph import reference_graph
 from collections.abc import Iterable
 
 from Src.Core.entity_model import entity_model
@@ -11,7 +12,7 @@ def collect_entity_graph(roots: Iterable[entity_model]) -> tuple[entity_model, .
     while pending:
         entity = pending.pop()
         children = []
-        for _, target in entity.references():
+        for _, target in reference_graph.references(entity):
             if id(target) not in visited:
                 visited.add(id(target))
                 entities.append(target)
