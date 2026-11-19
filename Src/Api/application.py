@@ -3,6 +3,7 @@ from Src.Logics.entity_mappings import entity_mappings, entity_resources
 from Src.Logics.dto_mapping import dto_mapper
 from Src.Logics.dto_serializer import dto_serializer
 
+from operator import eq
 from pathlib import Path
 
 import connexion
@@ -10,11 +11,14 @@ from flask import render_template_string, send_file, send_from_directory, url_fo
 from swagger_ui_bundle import swagger_ui_path
 
 from Src.Api.report_routes import register_report_routes
+from Src.Core.filter_operator_enum import filter_operator_enum
+from Src.Logics.filter_query import filter_query
 from Src.Logics.report_factory import report_factory
 from Src.Logics.report_service import report_service
 from Src.Logics.report_source_factory import report_source_factory
 from Src.Logics.settings_manager import setting_manager
 from Src.Logics.storage_manager import storage_manager
+from Src.Logics.turnover_service import turnover_service
 
 
 def create_app():
@@ -36,8 +40,13 @@ def create_app():
 
     mappings = entity_mappings()
     resources = entity_resources(mappings)
-    entities = entity_service(repository, dto_mapper(mappings, repository, resources), resources)
-    register_report_routes(api, repository, factory, service, entities, resources, dto_serializer())
+    query = filter_query(mappings.model_types(), {
+        filter_operator_enum.EQUALS: eq,
+        filter_operator_enum.LIKE: lambda actual, expected: expected.casefold() in actual.casefold(),
+    })
+    entities = entity_service(repository, dto_mapper(mappings, repository, resources), resources, query)
+    turnover = turnover_service(repository, query)
+    register_report_routes(api, repository, factory, service, entities, resources, dto_serializer(), turnover)
 
     api.app.extensions["report_storage"] = storage
     api.app.extensions["report_settings"] = settings

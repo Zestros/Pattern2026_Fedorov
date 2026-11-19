@@ -56,6 +56,76 @@ paths:
         '200': {$ref: '#/components/responses/Report'}
         '400': {$ref: '#/components/responses/Invalid'}
         '404': {$ref: '#/components/responses/NotFound'}
+  /api/reports/turnover:
+    post:
+      summary: Сформировать складскую оборотно-сальдовую ведомость
+      description: Обе даты входят в период. Движения до начала периода формируют начальный остаток. Фильтрация и сортировка применяются к движениям до группировки. Примеры путей — item.group.name, warehouse.unique_code и unit.base_unit.name.
+      operationId: get_turnover
+      parameters:
+        - name: date_from
+          in: query
+          required: true
+          schema: {type: string, format: date}
+          example: '2026-02-01'
+        - name: date_to
+          in: query
+          required: true
+          schema: {type: string, format: date}
+          example: '2026-02-28'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Filter'}
+            example:
+              filters:
+                - {field: item.name, operator: EQUALS, value: Мука}
+              sort:
+                - {field: warehouse.name, direction: ASC}
+      responses:
+        '200':
+          description: Остатки и обороты по складу и номенклатуре в базовых единицах
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/TurnoverRow'}
+        '400': {$ref: '#/components/responses/Invalid'}
+  /api/entities/{entity_type}/search:
+    post:
+      summary: Найти сущности по фильтру и отсортировать результаты
+      description: Пути заканчиваются на name или unique_code. Связи определяются по типам полей модели. Примеры путей — group.parent.name для номенклатуры, parent.name для групп, base_unit.name для единиц и ingredients.item.group.name для рецептов.
+      operationId: search_entities
+      parameters:
+        - name: entity_type
+          in: path
+          required: true
+          schema: {type: string, enum: [item, group, unit, recipe]}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Filter'}
+            example:
+              filters:
+                - {field: base_unit.name, operator: LIKE, value: грамм}
+              sort:
+                - {field: base_unit.name, direction: ASC}
+                - {field: name, direction: DESC}
+      responses:
+        '200':
+          description: Коды и наименования найденных сущностей
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [code, name]
+                  properties:
+                    code: {type: string}
+                    name: {type: string}
+        '400': {$ref: '#/components/responses/Invalid'}
   /api/entities/{entity_type}:
     parameters:
       - $ref: '#/components/parameters/EntityType'
@@ -163,6 +233,48 @@ components:
       required: true
       schema: {type: string, minLength: 1}
   schemas:
+    Filter:
+      type: object
+      additionalProperties: false
+      properties:
+        filters:
+          description: Все условия должны выполняться. Для вложенной коллекции достаточно совпадения в одной строке.
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [field, operator, value]
+            properties:
+              field: {type: string}
+              operator:
+                type: string
+                enum: [EQUALS, LIKE]
+                description: Полное совпадение или поиск подстроки без учёта регистра.
+              value: {type: string, minLength: 1}
+        sort:
+          description: Поля перечисляются по приоритету. Для вложенной коллекции ASC берёт минимум, DESC — максимум. Отсутствующие значения идут в конце.
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [field]
+            properties:
+              field: {type: string}
+              direction: {type: string, enum: [ASC, DESC], default: ASC}
+    TurnoverRow:
+      type: object
+      required: [warehouse_code, warehouse_name, item_code, item_name, unit_code, unit_name, opening, receipts, issues, closing]
+      properties:
+        warehouse_code: {type: string}
+        warehouse_name: {type: string}
+        item_code: {type: string}
+        item_name: {type: string}
+        unit_code: {type: string}
+        unit_name: {type: string}
+        opening: {type: number}
+        receipts: {type: number}
+        issues: {type: number}
+        closing: {type: number}
     Ingredient:
       type: object
       additionalProperties: false
@@ -198,6 +310,7 @@ components:
         coefficient: {type: number, minimum: 0, exclusiveMinimum: true}
         base_unit: {type: string, nullable: true, description: Код базовой единицы или null для самоссылки}
         group: {type: string, description: Код группы}
+        parent: {type: string, nullable: true, description: Код группы-владельца}
         unit: {type: string, description: Код единицы учёта}
         recipe: {type: string, description: Код рецепта составной номенклатуры}
         output_quantity: {type: number, nullable: true, minimum: 0, exclusiveMinimum: true}
@@ -222,6 +335,7 @@ components:
         coefficient: {type: number}
         base_unit: {type: string}
         group: {type: string}
+        parent: {type: string, nullable: true}
         unit: {type: string}
         recipe: {type: string}
         output_quantity: {type: number, nullable: true}

@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
-from Src.Dtos.filter_dto import filter_dto
+
 
 class abstract_prototype(ABC):
-    __data:list =[]
+    """Контракт клонирования коллекции."""
 
-    def __init__(self, data:list):
-        super().__init__()
-        pass
+    @abstractmethod
+    def clone(self):
+        """Возвращает новый экземпляр с результатом отбора."""

@@ -104,7 +104,7 @@ def test_inherited_fields_reference_convertor_convert_group():
     # Проверка
     assert result == {
         "group": {"$id": "1", "$type": "Src.Models.group_model.group_model", "$fields": {
-            "name": "Бакалея", "unique_code": group.unique_code,
+            "name": "Бакалея", "parent": None, "unique_code": group.unique_code,
         }},
     }
 

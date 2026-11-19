@@ -17,6 +17,7 @@ from Src.Models.recipe_ingredient_model import recipe_ingredient_model
 from Src.Models.recipe_item_model import recipe_item_model
 from Src.Models.recipe_model import recipe_model
 from Src.Models.settings_model import settings_model
+from Src.Models.transaction_model import transaction_model
 from Src.Models.unit_model import unit_model
 from Src.Models.warehouse_model import warehouse_model
 
@@ -27,6 +28,7 @@ def register_restore_handlers(factory) -> None:
         abstract_model, entity_model, group_model, warehouse_model,
         ratio_unit_model, ratio_value_model, item_model, recipe_item_model,
         recipe_ingredient_model, company_model, settings_model, unit_model, recipe_model,
+        transaction_model,
     )
     for model_type in model_types:
         factory.add_model(model_type)
