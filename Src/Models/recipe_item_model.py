@@ -23,14 +23,7 @@ class recipe_item_model(item_model):
         super().__init__(name, full_name, group, unit)
 
         validator.validate(recipe, recipe_model, field="recipe")
-
-        if output_quantity is None:
-            if unit.base_unit != recipe.mass_unit.base_unit:
-                raise arguments_exception(
-                    "output_quantity",
-                    "Для продукта не в единицах массы необходимо указать выход партии",
-                )
-        else:
+        if output_quantity is not None:
             validator.validate_number(
                 output_quantity,
                 "output_quantity",
@@ -39,6 +32,19 @@ class recipe_item_model(item_model):
 
         self.__recipe = recipe
         self.__output_quantity = output_quantity
+        self.validate_output_unit()
+
+    def validate_output_unit(self) -> None:
+        """Проверяет, что весовой продукт использует единицу массы своей карты."""
+        if self.output_quantity is None and self.unit.base_unit != self.recipe.mass_unit.base_unit:
+            raise arguments_exception(
+                "output_quantity",
+                "Для продукта не в единицах массы необходимо указать выход партии",
+            )
+
+    def validate_state(self) -> None:
+        """Проверяет выход продукта после изменения единицы или карты."""
+        self.validate_output_unit()
 
     @property
     def recipe(self) -> recipe_model:

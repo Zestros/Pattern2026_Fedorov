@@ -1,3 +1,8 @@
+from Src.Logics.entity_service import entity_service
+from Src.Logics.entity_mappings import entity_mappings, entity_resources
+from Src.Logics.dto_mapping import dto_mapper
+from Src.Logics.dto_serializer import dto_serializer
+
 from pathlib import Path
 
 import connexion
@@ -23,12 +28,16 @@ def create_app():
     storage = storage_manager(settings.settings)
     factory = report_factory(settings.settings)
 
-    service = report_service(storage, report_source_factory(), factory)
+    repository = storage.get_repository()
+    service = report_service(repository, report_source_factory(), factory)
 
     api = connexion.FlaskApp(__name__, specification_dir="./")
     api.app.json.ensure_ascii = False
 
-    register_report_routes(api, storage, factory, service)
+    mappings = entity_mappings()
+    resources = entity_resources(mappings)
+    entities = entity_service(repository, dto_mapper(mappings, repository, resources), resources)
+    register_report_routes(api, repository, factory, service, entities, resources, dto_serializer())
 
     api.app.extensions["report_storage"] = storage
     api.app.extensions["report_settings"] = settings

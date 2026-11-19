@@ -1,75 +1,270 @@
-openapi: 3.0.0
+openapi: 3.0.3
 info:
-  title: Main API
-  version: "1.0"
-  description: API "ООО <Ромашка>"
-
+  title: API «Ромашка»
+  version: '1.0'
 servers:
-  - url: http://localhost:8080
-    description: Local development server
-
+  - url: /
 paths:
-  /api/get_default_report:
+  /api/reports/formats:
     get:
-      summary: Получить отчет по сущности
-      description: Генерирует отчет для конкретного объекта по его уникальному коду.
-      operationId: main.get_default_report
-      parameters:
-        - name: entity
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Ключ сущности (например, nomenclature_model, group_model).
-        - name: unique_code
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Уникальный код конкретного объекта.
+      summary: Получить доступные форматы отчётов
+      operationId: get_report_formats
       responses:
         '200':
-          description: Успешно сгенерированный отчет.
-          content:
-            text/plain: 
-              schema:
-                type: string
-        '400':
-          description: Ошибка в параметрах запроса.
+          description: Имена форматов
           content:
             application/json:
               schema:
-                type: object
-              example:
-                detail: "Ошибка: Отсутствует параметр entity"
-        '500':
-          description: Внутренняя ошибка сервера.
-          content:
-            text/plain:
-              schema:
-                type: string
-              example: "Ошибка: Невозможно получить требуемый отчет!"
-
-  /api/get_entities:
+                type: array
+                items: {type: string}
+                example: [TXT, CSV, MARKDOWN, XML, HTML]
+  /api/get_report:
     get:
-      summary: Получить список доменных сущностей
-      description: Возвращает список всех доступных ключей (типов моделей), которые есть в хранилище.
-      operationId: main.get_entities
+      summary: Получить текстовый отчёт по стартовому рецепту
+      operationId: get_report
       responses:
         '200':
-          description: Список ключей сущностей в формате JSON.
+          description: Отчёт
           content:
-            text/json: 
+            text/plain:
+              schema: {type: string}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/reports/{entity_type}/{code}:
+    parameters:
+      - $ref: '#/components/parameters/ReportType'
+      - $ref: '#/components/parameters/Code'
+    get:
+      summary: Получить отчёт в указанном формате
+      operationId: get_report_by_format
+      parameters:
+        - name: format
+          in: query
+          required: true
+          schema: {type: string, enum: [TXT, CSV, MARKDOWN, XML, HTML]}
+      responses:
+        '200': {$ref: '#/components/responses/Report'}
+        '400': {$ref: '#/components/responses/Invalid'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/reports/{entity_type}/{code}/default:
+    parameters:
+      - $ref: '#/components/parameters/ReportType'
+      - $ref: '#/components/parameters/Code'
+    get:
+      summary: Получить отчёт в формате из настроек
+      operationId: get_default_report
+      responses:
+        '200': {$ref: '#/components/responses/Report'}
+        '400': {$ref: '#/components/responses/Invalid'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/entities/{entity_type}:
+    parameters:
+      - $ref: '#/components/parameters/EntityType'
+    get:
+      summary: Получить список сущностей
+      operationId: get_entities
+      responses:
+        '200':
+          description: Коды и наименования
+          content:
+            application/json:
               schema:
                 type: array
                 items:
-                  type: string
-              example: ["range_model", "group_model", "storage_model", "nomenclature_model", "receipt_model"]
-        '500':
-          description: Внутренняя ошибка сервера.
+                  type: object
+                  required: [code, name]
+                  properties:
+                    code: {type: string}
+                    name: {type: string}
+        '400': {$ref: '#/components/responses/Invalid'}
+    post:
+      summary: Создать сущность
+      operationId: create_entity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateEntity'}
+            examples:
+              group:
+                value: {name: Бакалея}
+              warehouse:
+                value: {name: Основной склад}
+              unit:
+                value: {name: килограмм, coefficient: 1000, base_unit: gram-code}
+              item:
+                value: {name: Мука, full_name: Мука пшеничная, group: group-code, unit: unit-code}
+              recipe:
+                value:
+                  name: Тесто
+                  mass_unit: gram-code
+                  ingredients:
+                    - {item: flour-code, quantity: 200}
+      responses:
+        '201':
+          description: Сущность создана
+          headers:
+            Location:
+              description: Адрес созданной сущности
+              schema: {type: string}
           content:
             application/json:
-              schema:
-                type: object
-              example:
-                detail: "Ошибка: Невозможно получить список доменных сущностей!"
+              schema: {$ref: '#/components/schemas/Entity'}
+        '400': {$ref: '#/components/responses/Invalid'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /api/entities/{entity_type}/{code}:
+    parameters:
+      - $ref: '#/components/parameters/EntityType'
+      - $ref: '#/components/parameters/Code'
+    get:
+      summary: Получить сущность по коду
+      operationId: get_entity
+      responses:
+        '200': {$ref: '#/components/responses/Entity'}
+        '400': {$ref: '#/components/responses/Invalid'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    patch:
+      summary: Изменить переданные поля сущности
+      description: Набор полей определяется типом сущности. Код можно изменить при отсутствии входящих ссылок. Для замены состава передайте весь массив ingredients.
+      operationId: update_entity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/EntityFields'}
+            example: {name: Новое наименование}
+      responses:
+        '200': {$ref: '#/components/responses/Entity'}
+        '400': {$ref: '#/components/responses/Invalid'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+    delete:
+      summary: Удалить сущность без входящих ссылок
+      operationId: delete_entity
+      responses:
+        '204': {description: Сущность удалена}
+        '400': {$ref: '#/components/responses/Invalid'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+components:
+  parameters:
+    EntityType:
+      name: entity_type
+      in: path
+      required: true
+      schema: {type: string, enum: [group, warehouse, unit, item, recipe]}
+    ReportType:
+      name: entity_type
+      in: path
+      required: true
+      schema: {type: string, enum: [item, unit, recipe]}
+    Code:
+      name: code
+      in: path
+      required: true
+      schema: {type: string, minLength: 1}
+  schemas:
+    Ingredient:
+      type: object
+      additionalProperties: false
+      required: [item, quantity]
+      properties:
+        unique_code: {type: string}
+        item: {type: string, description: Код номенклатуры}
+        quantity: {type: number, minimum: 0}
+        is_packaging: {type: boolean, default: false}
+    Ratio:
+      type: object
+      nullable: true
+      additionalProperties: false
+      required: [value, unit]
+      properties:
+        unique_code: {type: string}
+        value: {type: number, minimum: 0, exclusiveMinimum: true}
+        unit:
+          type: object
+          additionalProperties: false
+          required: [numerator_unit, denominator_unit]
+          properties:
+            unique_code: {type: string}
+            numerator_unit: {type: string, description: Код единицы числителя}
+            denominator_unit: {type: string, description: Код единицы знаменателя}
+    EntityFields:
+      type: object
+      additionalProperties: false
+      properties:
+        unique_code: {type: string, minLength: 1, description: Код сущности}
+        name: {type: string, minLength: 1, maxLength: 50}
+        full_name: {type: string, minLength: 1, maxLength: 255}
+        coefficient: {type: number, minimum: 0, exclusiveMinimum: true}
+        base_unit: {type: string, nullable: true, description: Код базовой единицы или null для самоссылки}
+        group: {type: string, description: Код группы}
+        unit: {type: string, description: Код единицы учёта}
+        recipe: {type: string, description: Код рецепта составной номенклатуры}
+        output_quantity: {type: number, nullable: true, minimum: 0, exclusiveMinimum: true}
+        mass_ratio: {$ref: '#/components/schemas/Ratio'}
+        mass_unit: {type: string, description: Код единицы массы рецепта}
+        mass_coefficient: {type: number, minimum: 0, exclusiveMinimum: true}
+        ingredients:
+          type: array
+          items: {$ref: '#/components/schemas/Ingredient'}
+    CreateEntity:
+      description: Для склада и группы требуется name. Для единицы требуется name. Для номенклатуры дополнительно нужны full_name, group и unit. Для рецепта дополнительно нужен mass_unit. Поле recipe создаёт составную номенклатуру, для которой mass_ratio не используется.
+      allOf:
+        - $ref: '#/components/schemas/EntityFields'
+        - required: [name]
+    Entity:
+      type: object
+      required: [unique_code, name]
+      properties:
+        unique_code: {type: string}
+        name: {type: string}
+        full_name: {type: string}
+        coefficient: {type: number}
+        base_unit: {type: string}
+        group: {type: string}
+        unit: {type: string}
+        recipe: {type: string}
+        output_quantity: {type: number, nullable: true}
+        mass_ratio: {$ref: '#/components/schemas/Ratio'}
+        mass_unit: {type: string}
+        mass_coefficient: {type: number}
+        ingredients:
+          type: array
+          items: {$ref: '#/components/schemas/Ingredient'}
+        gross_weight: {type: number, readOnly: true}
+        net_weight: {type: number, readOnly: true}
+        packaging_weight: {type: number, readOnly: true}
+  responses:
+    Report:
+      description: Отчёт в выбранном формате
+      content:
+        text/plain:
+          schema: {type: string}
+        text/csv:
+          schema: {type: string}
+        text/markdown:
+          schema: {type: string}
+        application/xml:
+          schema: {type: string}
+        text/html:
+          schema: {type: string}
+    Entity:
+      description: Поля сущности, ссылки представлены кодами
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Entity'}
+    Invalid:
+      description: Некорректные данные, тип или ссылка
+      content:
+        text/plain:
+          schema: {type: string}
+    NotFound:
+      description: Сущность не найдена
+      content:
+        text/plain:
+          schema: {type: string}
+    Conflict:
+      description: Код уже занят или на сущность ссылаются другие объекты
+      content:
+        text/plain:
+          schema: {type: string}

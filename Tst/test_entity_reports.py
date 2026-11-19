@@ -1,5 +1,7 @@
 """Модульные проверки подготовки отчётов и поиска сущностей."""
-from Src.Core.entity_type_enum import entity_type_enum
+from Src.Models.recipe_model import recipe_model
+from Src.Models.unit_model import unit_model
+from Src.Models.item_model import item_model
 from Src.Logics.report_source_factory import report_source_factory
 
 import pytest
@@ -21,7 +23,7 @@ def storage(monkeypatch):
 
 def contracts():
     """Возвращает типы сущностей и новую фабрику обработчиков."""
-    return entity_type_enum, report_source_factory()
+    return {"ITEM": item_model, "UNIT": unit_model, "RECIPE": recipe_model}, report_source_factory()
 
 
 @pytest.mark.parametrize("kind", ["ITEM", "UNIT", "RECIPE"])
@@ -80,7 +82,7 @@ def test_found_entity_find_own_code(storage, kind):
     # Действие и Проверка
     assert storage.find(types[kind], entity.unique_code) is entity
     assert storage.find(types[kind], "unknown") is None
-    assert storage.find(types.RECIPE, product.unique_code) is None
+    assert storage.find(recipe_model, product.unique_code) is None
 
 
 @pytest.mark.parametrize("kind", ["ITEM", "UNIT", "RECIPE"])
@@ -103,4 +105,4 @@ def test_rejected_arguments_factory_and_find(storage):
     with pytest.raises(arguments_exception):
         storage.find("item", "code")
     with pytest.raises(arguments_exception):
-        storage.find(types.ITEM, " ")
+        storage.find(item_model, " ")

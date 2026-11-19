@@ -1,55 +1,55 @@
-from Src.Core.entity_type_enum import entity_type_enum
-from Src.Core.entity_model import entity_model
-from Src.Core.validator import validator
+from threading import RLock
+from collections.abc import Iterable, Callable
+
+from Src.Core.abstract_entity_repository import (
+    abstract_entity_repository,
+)
 from Src.Core.abstract_manager import abstract_manager
+from Src.Core.entity_model import entity_model
 from Src.Core.exception import arguments_exception
-from Src.Core.validator import operation_exception
-from Src.Models.settings_model import settings_model
-from Src.Models.warehouse_model import warehouse_model
-from Src.Models.unit_model import unit_model
-from Src.Models.item_model import item_model
-from Src.Models.recipe_item_model import recipe_item_model
+from Src.Core.validator import operation_exception, validator
+from Src.Logics.initial_catalog import initial_catalog
 from Src.Models.group_model import group_model
+from Src.Models.item_model import item_model
+from Src.Models.recipe_model import recipe_model
+from Src.Models.settings_model import settings_model
+from Src.Models.unit_model import unit_model
+from Src.Models.warehouse_model import warehouse_model
 
 
-class storage_manager(abstract_manager):
-    """Хранит доменные модели в единственном экземпляре менеджера."""
+from Src.Logics.entity_repository import entity_repository
 
-    # Единственный экземпляр менеджера.
+
+class storage_manager(abstract_manager, abstract_entity_repository):
+    """Фасад загрузки каталога; операции хранения делегирует репозиторию."""
+
     __instance = None
+    __initialization_lock = RLock()
 
     def __new__(cls, settings: settings_model):
-        """Создаёт менеджер один раз."""
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls)
-            cls.__instance.__initialized = False
-
-        return cls.__instance
+        """Создаёт общий экземпляр менеджера."""
+        with cls.__initialization_lock:
+            if cls.__instance is None:
+                cls.__instance = super().__new__(cls)
+                cls.__instance.__initialized = False
+            return cls.__instance
 
     def __init__(self, settings: settings_model) -> None:
-        """Подготавливает хранилище при первом создании."""
-        if self.__initialized:
-            return
+        """Подготавливает хранилище один раз при первом создании."""
+        with self.__initialization_lock:
+            if self.__initialized:
+                return
 
-        if not isinstance(settings, settings_model):
-            raise arguments_exception(
-                "settings",
-                "Ожидается модель настроек",
-            )
-
-        self.__settings = settings
-        self.__warehouses: list[warehouse_model] = []
-        self.__units: list[unit_model] = []
-        self.__items: list[item_model] = []
-        self.__groups: list[group_model] = []
-        self._is_loaded = False
-
-        self.convert()
-        self.__initialized = True
+            validator.validate(settings, settings_model, field="settings")
+            self.__settings = settings
+            self.__repository = entity_repository()
+            self._is_loaded = False
+            self.convert()
+            self.__initialized = True
 
     @classmethod
     def initialize_empty(cls, instance: "storage_manager") -> None:
-        """Инициализирует выделенное хранилище без стартовых данных и смены Singleton."""
+        """Инициализирует отдельное хранилище без стартовых данных."""
         if type(instance) is not cls:
             raise arguments_exception("instance", "Ожидается экземпляр хранилища")
         settings = settings_model()
@@ -59,149 +59,92 @@ class storage_manager(abstract_manager):
 
     @property
     def warehouses(self) -> tuple[warehouse_model, ...]:
-        """Возвращает склады без возможности менять состав коллекции."""
-        return tuple(self.__warehouses)
+        """Возвращает зарегистрированные склады."""
+        return self.list(warehouse_model)
 
     @property
     def units(self) -> tuple[unit_model, ...]:
-        """Возвращает единицы измерения."""
-        return tuple(self.__units)
+        """Возвращает зарегистрированные единицы измерения."""
+        return self.list(unit_model)
 
     @property
     def items(self) -> tuple[item_model, ...]:
-        """Возвращает номенклатуру."""
-        return tuple(self.__items)
+        """Возвращает зарегистрированную номенклатуру, включая состав рецептов."""
+        return self.list(item_model)
 
     @property
     def groups(self) -> tuple[group_model, ...]:
-        """Возвращает группы."""
-        return tuple(self.__groups)
+        """Возвращает зарегистрированные группы."""
+        return self.list(group_model)
+
+    @property
+    def recipes(self) -> tuple[recipe_model, ...]:
+        """Возвращает самостоятельные и вложенные карты."""
+        return self.list(recipe_model)
 
     def convert(self) -> bool:
-        """Подготавливает данные один раз с учётом первого старта."""
-        if self._is_loaded:
-            return True
-
-        try:
-            warehouses = []
-            units = []
-            items = []
-            groups = []
+        """Регистрирует стартовые модели один раз с учётом настроек."""
+        with self.__initialization_lock:
+            if self._is_loaded:
+                return True
 
             if self.__settings.first_start:
-                group = group_model.create_grocery()
-                warehouse = warehouse_model.create_main()
-                kilogram = unit_model.create_kilogram()
-                gram = kilogram.base_unit
-                liter = unit_model.create_liter()
-                milliliter = liter.base_unit
-                piece = unit_model.create_piece()
+                try:
+                    self.register_models(initial_catalog())
+                except arguments_exception as error:
+                    raise operation_exception("Не удалось подготовить данные хранилища") from error
 
-                dough = recipe_item_model.create_dough(group, kilogram, liter)
-                bread = recipe_item_model.create_flatbreads(dough, piece)
-                cake = recipe_item_model.create_cake(
-                    group,
-                    gram,
-                    piece,
-                )
-
-                groups.append(group)
-                warehouses.append(warehouse)
-                units.extend([gram, kilogram, milliliter, liter, piece])
-                # Регистрируем те же продукты, на которые ссылается карта.
-                items.extend(row.item for row in dough.recipe.ingredients)
-                items.extend([dough, bread])
-                items.append(cake)
-
-            self.__warehouses = warehouses
-            self.__units = units
-            self.__items = items
-            self.__groups = groups
             self._is_loaded = True
-
             return True
-        except Exception as error:
-            raise operation_exception(
-                "Не удалось подготовить данные хранилища"
-            )
-        
-    def __add_model(self, value, expected_type, collection) -> None:
-        """Проверяет тип и уникальность кода перед добавлением."""
-        if not isinstance(value, expected_type):
-            raise arguments_exception(
-                "value",
-                f"Ожидается модель {expected_type.__name__}",
-            )
 
-        collections = (
-            self.__warehouses,
-            self.__units,
-            self.__items,
-            self.__groups,
-        )
+    def get_repository(self) -> entity_repository:
+        """Возвращает репозиторий для подключения прикладных сценариев."""
+        return self.__repository
 
-        for models in collections:
-            for model in models:
-                if model.unique_code == value.unique_code:
-                    raise arguments_exception(
-                        "unique_code",
-                        "Объект с таким кодом уже существует",
-                    )
+    def list(self, entity_type: type[entity_model]):
+        """Возвращает сущности типа через репозиторий."""
+        return self.__repository.list(entity_type)
 
-        collection.append(value)
+    def find(self, entity_type: type[entity_model], code: str):
+        """Находит сущность через репозиторий."""
+        return self.__repository.find(entity_type, code)
+
+    def add(self, entity_type: type[entity_model], value: entity_model):
+        """Передаёт регистрацию сущности репозиторию."""
+        return self.__repository.add(entity_type, value)
+
+    def find_references(self, entity_type: type[entity_model], code: str):
+        """Получает владельцев ссылок через репозиторий."""
+        return self.__repository.find_references(entity_type, code)
+
+    def delete(self, entity_type: type[entity_model], code: str):
+        """Передаёт удаление репозиторию."""
+        return self.__repository.delete(entity_type, code)
+
+    def update(self, entity_type: type[entity_model], code: str, fields: dict):
+        """Сохраняет совместимость старых вызовов обновления."""
+        return self.__repository.update(entity_type, code, fields)
+
+    def change(self, entity_type: type[entity_model], code: str, prepare: Callable):
+        """Передаёт атомарное изменение репозиторию."""
+        return self.__repository.change(entity_type, code, prepare)
+
+    def register_models(self, values: Iterable[entity_model]):
+        """Передаёт пакетную регистрацию репозиторию."""
+        return self.__repository.register_models(values)
 
     def add_warehouse(self, value: warehouse_model) -> None:
-        """Добавляет уникальный склад."""
-        self.__add_model(value, warehouse_model, self.__warehouses)
+        """Добавляет склад через общий репозиторий."""
+        self.add(warehouse_model, value)
 
     def add_unit(self, value: unit_model) -> None:
-        """Добавляет уникальную единицу с зарегистрированной базой."""
-        if isinstance(value, unit_model):
-            if value.base_unit is not value and not any(
-                unit is value.base_unit for unit in self.__units
-            ):
-                raise arguments_exception(
-                    "base_unit",
-                    "Базовая единица отсутствует в хранилище",
-                )
-
-        self.__add_model(value, unit_model, self.__units)
+        """Добавляет единицу через общий репозиторий."""
+        self.add(unit_model, value)
 
     def add_group(self, value: group_model) -> None:
-        """Добавляет уникальную группу."""
-        self.__add_model(value, group_model, self.__groups)
+        """Добавляет группу через общий репозиторий."""
+        self.add(group_model, value)
 
     def add_item(self, value: item_model) -> None:
-        """Добавляет номенклатуру с зарегистрированной группой и единицей."""
-        if isinstance(value, item_model):
-            if not any(group is value.group for group in self.__groups):
-                raise arguments_exception(
-                    "group",
-                    "Группа отсутствует в хранилище",
-                )
-
-            if not any(unit is value.unit for unit in self.__units):
-                raise arguments_exception(
-                    "unit",
-                    "Единица измерения отсутствует в хранилище",
-                )
-
-        self.__add_model(value, item_model, self.__items)
-
-    def find(self, entity_type: entity_type_enum, code: str) -> entity_model | None:
-        """Находит объект по собственному коду; отсутствие возвращает None."""
-        validator.validate(entity_type, entity_type_enum, field="entity_type")
-        validator.validate(code, str, field="code")
-        collections = {
-            entity_type_enum.ITEM: self.items,
-            entity_type_enum.UNIT: self.units,
-            entity_type_enum.RECIPE: tuple(
-                item.recipe for item in self.items
-                if isinstance(item, recipe_item_model)
-            ),
-        }
-        return next(
-            (model for model in collections[entity_type]
-             if model.unique_code == code.strip()),
-            None,
-        )
+        """Добавляет номенклатуру через общий репозиторий."""
+        self.add(item_model, value)

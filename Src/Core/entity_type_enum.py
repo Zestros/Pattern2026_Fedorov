@@ -2,8 +2,10 @@ from enum import Enum
 
 
 class entity_type_enum(Enum):
-    """Типы сущностей, доступные для отчётности."""
+    """Типы сущностей для чтения ранее сохранённых значений JSON."""
 
     ITEM = "item"
     UNIT = "unit"
     RECIPE = "recipe"
+    GROUP = "group"
+    WAREHOUSE = "warehouse"

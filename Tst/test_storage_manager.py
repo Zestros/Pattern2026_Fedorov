@@ -1,6 +1,8 @@
 """Юнит-тесты менеджера хранения."""
 import pytest
 
+from Src.Core.entity_conflict_exception import entity_conflict_exception
+from Src.Core.entity_model import entity_model
 from Src.Core.exception import arguments_exception
 from Src.Logics.storage_manager import storage_manager
 from Src.Models.settings_model import settings_model
@@ -9,6 +11,23 @@ from Src.Models.unit_model import unit_model
 from Src.Models.group_model import group_model
 from Src.Models.item_model import item_model
 from Src.Models.recipe_item_model import recipe_item_model
+from Src.Models.recipe_ingredient_model import recipe_ingredient_model
+from Src.Models.recipe_model import recipe_model
+
+
+class warehouse_assignment_model(entity_model):
+    """Тестовая сущность со ссылкой на склад без регистрации типа в хранилище."""
+
+    def __init__(self, warehouse: warehouse_model) -> None:
+        """Сохраняет склад, на который назначена сущность."""
+        super().__init__()
+        self.name = "Назначение склада"
+        self.__warehouse = warehouse
+
+    @property
+    def warehouse(self) -> warehouse_model:
+        """Возвращает склад, обнаруживаемый через параметр конструктора."""
+        return self.__warehouse
 
 
 @pytest.fixture(autouse=True)
@@ -106,6 +125,7 @@ def test_empty_collections_storage_manager_regular_start(manager):
     assert manager.units == ()
     assert manager.items == ()
     assert manager.groups == ()
+    assert manager.recipes == ()
 
 
 @pytest.mark.parametrize(
@@ -309,13 +329,15 @@ def test_filled_collections_storage_manager_first_start(settings):
     assert len(manager.warehouses) == 1
     assert len(manager.groups) == 1
     assert len(manager.units) == 5
-    assert len(manager.items) == 7
+    assert len(manager.items) == 13
     assert manager.warehouses[0].name == "Основной склад"
     assert manager.groups[0].name == "Бакалея"
     assert {item.name for item in manager.items} == {
         "Мука", "Вода", "Масло", "Соль",
         "Тесто", "Пшеничные лепёшки", "Бисквитный торт",
+        "Сахар", "Яйцо", "Сметана", "Бисквитный корж", "Порция крема",
     }
+    assert len(manager.recipes) == 5
 
     # Действие
     all_models = (
@@ -323,6 +345,7 @@ def test_filled_collections_storage_manager_first_start(settings):
         + manager.groups
         + manager.units
         + manager.items
+        + manager.recipes
     )
     codes = [model.unique_code for model in all_models]
 
@@ -376,11 +399,10 @@ def test_created_recipes_storage_manager_first_start(settings):
     # Подготовка
     settings.first_start = True
     manager = storage_manager(settings)
-    items = {item.name: item for item in manager.items}
-    dough = items["Тесто"]
+    dough = next(item for item in manager.items if item.name == "Тесто")
 
     # Действие
-    bread = items["Пшеничные лепёшки"]
+    bread = next(item for item in manager.items if item.name == "Пшеничные лепёшки")
 
     # Проверка
     assert isinstance(dough, recipe_item_model)
@@ -403,7 +425,7 @@ def test_created_recipes_storage_manager_first_start(settings):
 
     # Действие
     for row in dough.recipe.ingredients:
-        assert row.item is items[row.item.name]
+        assert row.item is manager.find(item_model, row.item.unique_code)
 
     # Проверка
     assert len(bread.recipe.ingredients) == 1
@@ -463,3 +485,213 @@ def test_preserved_recipes_storage_manager_repeated_initialization(settings):
     assert bread.recipe is previous_recipe
     assert bread.recipe.ingredients[0] is previous_row
     assert bread.recipe.net_weight == pytest.approx(448.65)
+
+
+def test_registered_recipe_storage_manager_add_and_find(manager, models):
+    """<summary>Самостоятельная карта и продукт используют один экземпляр карты из репозитория.</summary>"""
+    # Подготовка
+    group, unit, item = (models[name] for name in ("group", "unit", "item"))
+    manager.add(group_model, group)
+    manager.add(unit_model, unit)
+    manager.add(item_model, item)
+    recipe = recipe_model("Технологическая карта", unit)
+    recipe.add_ingredient(item, 1)
+    product = recipe_item_model("Хлеб", "Хлеб пшеничный", group, unit, recipe)
+
+    # Действие
+    manager.add(recipe_model, recipe)
+    manager.add(item_model, product)
+
+    # Проверка
+    assert manager.list(recipe_model) == (recipe,)
+    assert manager.find(recipe_model, recipe.unique_code) is product.recipe
+    assert recipe.ingredients[0].item is manager.find(item_model, item.unique_code)
+    assert manager.find(item_model, recipe.unique_code) is None
+
+
+def test_unchanged_storage_manager_add_recipe_with_unregistered_ingredient(manager, models):
+    """<summary>Карта отклоняется, если её строка указывает на копию зарегистрированного продукта.</summary>"""
+    # Подготовка
+    group, unit, item = (models[name] for name in ("group", "unit", "item"))
+    manager.add(group_model, group)
+    manager.add(unit_model, unit)
+    manager.add(item_model, item)
+    copy = item_model(item.name, item.full_name, group, unit)
+    copy.unique_code = item.unique_code
+    recipe = recipe_model("Технологическая карта", unit)
+    recipe.add_ingredient(copy, 1)
+
+    # Действие
+    with pytest.raises(arguments_exception):
+        manager.add(recipe_model, recipe)
+
+    # Проверка
+    assert not manager.recipes
+    assert manager.find(item_model, item.unique_code) is item
+
+
+def test_protected_unit_storage_manager_delete_and_change_code(settings):
+    """<summary>Индекс находит прямые ссылки единиц, характеристик массы и рецептов.</summary>"""
+    # Подготовка
+    settings.first_start = True
+    storage = storage_manager(settings)
+    gram, kilogram, _, liter, _ = storage.units
+
+    # Действие
+    gram_owners = storage.find_references(unit_model, gram.unique_code)
+    liter_owners = storage.find_references(unit_model, liter.unique_code)
+    with pytest.raises(entity_conflict_exception):
+        storage.delete(unit_model, gram.unique_code)
+    with pytest.raises(entity_conflict_exception):
+        storage.update(unit_model, gram.unique_code, {"unique_code": "gram"})
+    updated = storage.update(unit_model, gram.unique_code, {"name": "г"})
+
+    # Проверка
+    assert any(owner is kilogram for owner in gram_owners)
+    assert any(isinstance(owner, recipe_model) for owner in gram_owners)
+    assert {owner.name for owner in liter_owners} == {"Вода", "Масло"}
+    assert all(owner is not gram for owner in gram_owners)
+    assert storage.find(unit_model, gram.unique_code) is gram
+    assert updated is gram
+    assert kilogram.base_unit is gram
+    assert kilogram.base_unit.name == "г"
+
+
+def test_updated_links_storage_manager_update_and_delete_recipe(manager, models):
+    """<summary>Замена строк снимает старые ссылки и регистрирует новые, удаление карты освобождает товары.</summary>"""
+    # Подготовка
+    group, unit, item = (models[name] for name in ("group", "unit", "item"))
+    manager.add(group_model, group)
+    manager.add(unit_model, unit)
+    manager.add(item_model, item)
+    replacement = item_model("Сахар", "Сахар белый", group, unit)
+    manager.add(item_model, replacement)
+    recipe = recipe_model("Карта", unit)
+    recipe.add_ingredient(item, 1)
+    manager.add(recipe_model, recipe)
+    product = recipe_item_model("Хлеб", "Хлеб пшеничный", group, unit, recipe)
+    manager.add(item_model, product)
+
+    new_line = recipe_ingredient_model(replacement, 2)
+
+    # Действие
+    updated = manager.update(recipe_model, recipe.unique_code, {"ingredients": [new_line]})
+    deleted_item = manager.delete(item_model, item.unique_code)
+
+    # Проверка
+    assert updated is recipe
+    assert product.recipe is recipe
+    assert product.recipe.ingredients == (new_line,)
+    assert recipe.net_weight == 2
+    assert deleted_item
+    assert manager.find_references(item_model, replacement.unique_code) == (recipe,)
+    # Действие
+    with pytest.raises(entity_conflict_exception):
+        manager.delete(recipe_model, recipe.unique_code)
+    deleted_product = manager.delete(item_model, product.unique_code)
+    deleted_recipe = manager.delete(recipe_model, recipe.unique_code)
+    deleted_replacement = manager.delete(item_model, replacement.unique_code)
+
+    # Проверка
+    assert deleted_product
+    assert deleted_recipe
+    assert deleted_replacement
+    assert not manager.delete(item_model, replacement.unique_code)
+
+
+def test_preserved_state_storage_manager_update_incompatible_recipe_unit(settings):
+    """<summary>Несовместимое изменение карты откатывает её состояние и сохраняет входящие связи.</summary>"""
+    # Подготовка
+    settings.first_start = True
+    storage = storage_manager(settings)
+    dough = next(item for item in storage.items if item.name == "Тесто")
+    recipe = dough.recipe
+    previous_unit = recipe.mass_unit
+    previous_name = recipe.name
+    previous_rows = recipe.ingredients
+
+    # Действие
+    with pytest.raises(arguments_exception):
+        storage.update(recipe_model, recipe.unique_code, {
+            "name": "Другое тесто", "mass_unit": storage.units[-1],
+        })
+
+    # Проверка
+    assert recipe.name == previous_name
+    assert recipe.mass_unit is previous_unit
+    assert recipe.ingredients == previous_rows
+    assert recipe.net_weight == pytest.approx(498.5)
+    assert storage.find_references(recipe_model, recipe.unique_code) == (dough,)
+
+    # Действие
+    with pytest.raises(arguments_exception, match="Циклическая ссылка"):
+        storage.update(recipe_model, recipe.unique_code, {
+            "ingredients": [recipe_ingredient_model(dough, 1)],
+        })
+
+    # Проверка
+    assert recipe.ingredients == previous_rows
+    assert storage.find_references(item_model, dough.unique_code) == (
+        next(item.recipe for item in storage.items if item.name == "Пшеничные лепёшки"),
+    )
+
+
+def test_changed_code_storage_manager_update_unreferenced_unit(manager):
+    """<summary>Смена кода переносит запись и исходящие связи без потери идентичности.</summary>"""
+    # Подготовка
+    gram = unit_model("грамм")
+    kilogram = unit_model("килограмм", 1000, gram)
+    manager.add(unit_model, gram)
+    manager.add(unit_model, kilogram)
+    old_code = kilogram.unique_code
+
+    # Действие
+    with pytest.raises(entity_conflict_exception):
+        manager.update(unit_model, old_code, {"unique_code": gram.unique_code})
+    with pytest.raises(arguments_exception, match="через репозиторий"):
+        kilogram.unique_code = "outside"
+
+    updated_kilogram = manager.update(unit_model, old_code, {"unique_code": "kg"})
+
+    # Проверка
+    assert updated_kilogram is kilogram
+    assert manager.find(unit_model, old_code) is None
+    assert manager.find(unit_model, "kg") is kilogram
+    assert manager.find_references(unit_model, gram.unique_code) == (kilogram,)
+    # Действие
+    deleted_kilogram = manager.delete(unit_model, "kg")
+    updated_gram = manager.update(unit_model, gram.unique_code, {"unique_code": "g"})
+    deleted_gram = manager.delete(unit_model, "g")
+
+    # Проверка
+    assert deleted_kilogram
+    assert updated_gram is gram
+    assert gram.base_unit is gram
+    assert deleted_gram
+
+
+def test_indexed_new_type_storage_manager_update_reference_without_registry(manager):
+    """<summary>Репозиторий индексирует связь нового типа и переносит её при обновлении без изменений в реестре.</summary>"""
+    # Подготовка
+    first = warehouse_model("Первый склад")
+    second = warehouse_model("Второй склад")
+    assignment = warehouse_assignment_model(first)
+    manager.add(warehouse_model, first)
+    manager.add(warehouse_model, second)
+    manager.add(warehouse_assignment_model, assignment)
+
+    # Действие
+    listed = manager.list(warehouse_assignment_model)
+    references = manager.find_references(warehouse_model, first.unique_code)
+    with pytest.raises(entity_conflict_exception):
+        manager.delete(warehouse_model, first.unique_code)
+    updated = manager.update(warehouse_assignment_model, assignment.unique_code, {"warehouse": second})
+    deleted = manager.delete(warehouse_model, first.unique_code)
+
+    # Проверка
+    assert listed == (assignment,)
+    assert references == (assignment,)
+    assert updated is assignment
+    assert assignment.warehouse is second
+    assert deleted
+    assert manager.find_references(warehouse_model, second.unique_code) == (assignment,)

@@ -1,7 +1,11 @@
-from flask import Response, request, jsonify
+from flask import Response, request, jsonify, url_for
 
+from Src.Logics.entity_service import entity_service, entity_not_found_exception
+from Src.Logics.resource_catalog import resource_catalog
+from Src.Logics.dto_serializer import dto_serializer
 from Src.Api.http_report import http_report
-from Src.Core.entity_type_enum import entity_type_enum
+from Src.Core.abstract_entity_repository import abstract_entity_repository
+from Src.Core.entity_conflict_exception import entity_conflict_exception
 from Src.Core.exception import arguments_exception
 from Src.Core.report_type_enum import report_type_enum
 from Src.Logics.report_service import report_not_found_exception
@@ -9,17 +13,25 @@ from Src.Logics.recipe_report_source import recipe_report_source
 from Src.Models.recipe_item_model import recipe_item_model
 
 
-def register_report_routes(api, storage, factory, service) -> None:
-    """Регистрирует маршруты отчётности и обработчики ошибок API."""
+def register_report_routes(api, storage: abstract_entity_repository, factory, service,
+                           entities: entity_service, resources: resource_catalog, serializer: dto_serializer) -> None:
+    """Регистрирует маршруты отчётности и работы с доменными сущностями."""
+
+    def read_fields() -> dict:
+        """Читает JSON-объект из тела запроса."""
+        fields = request.get_json(silent=True)
+        if not isinstance(fields, dict):
+            raise arguments_exception("body", "Ожидается JSON-объект")
+        return fields
+
     @api.route("/api/get_report", methods=["GET"])
     def get_report():
         """Формирует текстовый отчёт по стартовому рецепту."""
         product = next(
             (
                 item
-                for item in storage.items
-                if isinstance(item, recipe_item_model)
-                and item.name == "Пшеничные лепёшки"
+                for item in storage.list(recipe_item_model)
+                if item.name == "Пшеничные лепёшки"
             ),
             None,
         )
@@ -37,25 +49,26 @@ def register_report_routes(api, storage, factory, service) -> None:
         return http_report.make_report_response(result)
 
 
-    def parse_entity_type(value: str) -> entity_type_enum:
-        """Преобразует параметр URL в поддерживаемый тип сущности."""
-        try:
-            return entity_type_enum(value.strip().lower())
-        except ValueError as error:
-            raise arguments_exception("entity_type", "Ожидается item, unit или recipe") from error
-
-
     @api.app.errorhandler(arguments_exception)
     def invalid_arguments(error):
         """Преобразует ошибку входных данных в HTTP 400."""
         return Response(str(error), status=400, content_type="text/plain; charset=utf-8")
 
+    @api.app.errorhandler(entity_conflict_exception)
+    def entity_conflict(error):
+        """Возвращает HTTP 409 при дубликате кода или входящих ссылках."""
+        return Response(str(error), status=409, content_type="text/plain; charset=utf-8")
 
+    @api.app.errorhandler(entity_not_found_exception)
     @api.app.errorhandler(report_not_found_exception)
     def entity_not_found(error):
         """Преобразует отсутствие сущности в HTTP 404."""
         return Response(str(error), status=404, content_type="text/plain; charset=utf-8")
 
+    @api.route("/api/reports/formats", methods=["GET"])
+    def get_report_formats():
+        """Возвращает имена форматов, доступных в фабрике отчётов."""
+        return jsonify(serializer.serialize(tuple(format_.name for format_ in factory.formats())))
 
     @api.route("/api/reports/<entity_type>/<code>", methods=["GET"])
     def get_report_by_format(entity_type: str, code: str):
@@ -63,29 +76,47 @@ def register_report_routes(api, storage, factory, service) -> None:
         try:
             format_ = report_type_enum[request.args.get("format", "").strip().upper()]
         except KeyError as error:
-            raise arguments_exception("format", "Укажите CSV, Markdown, XML, TXT или HTML") from error
-        return http_report.make_report_response(service.build(parse_entity_type(entity_type), code, format_))
+            allowed = ", ".join(format_.name for format_ in factory.formats())
+            raise arguments_exception("format", f"Укажите формат из списка: {allowed}") from error
+        return http_report.make_report_response(service.build(entities.model_type(entity_type), code, format_))
 
 
     @api.route("/api/reports/<entity_type>/<code>/default", methods=["GET"])
     def get_default_report(entity_type: str, code: str):
         """Формирует отчёт с использованием create_default через сервис."""
-        return http_report.make_report_response(service.build_default(parse_entity_type(entity_type), code))
+        return http_report.make_report_response(service.build_default(entities.model_type(entity_type), code))
 
 
     @api.route("/api/entities/<entity_type>", methods=["GET"])
     def get_entities(entity_type: str):
-        """Возвращает актуальные коды для запросов отчётности."""
-        selected = parse_entity_type(entity_type)
-        collections = {
-            entity_type_enum.ITEM: storage.items,
-            entity_type_enum.UNIT: storage.units,
-            entity_type_enum.RECIPE: tuple(item.recipe for item in storage.items
-                                          if isinstance(item, recipe_item_model)),
-        }
-        response = jsonify([
-            {"code": item.unique_code, "name": item.name}
-            for item in collections[selected]
-        ])
-        response.headers["Content-Type"] = "application/json; charset=utf-8"
+        """Список использует те же DTO и сериализатор, что и остальные ответы."""
+        return jsonify(serializer.serialize(entities.list(entity_type)))
+
+    @api.route("/api/entities/<entity_type>", methods=["POST"])
+    def create_entity(entity_type: str):
+        """Разбирает внешний контракт и вызывает общий прикладной сценарий."""
+        fields = read_fields()
+        dto = serializer.deserialize(fields, resources.request_type(entity_type, fields))
+        result = entities.create(dto)
+        response = jsonify(serializer.serialize(result))
+        response.status_code = 201
+        response.headers["Location"] = url_for("get_entity", entity_type=entity_type, code=result.unique_code)
         return response
+
+    @api.route("/api/entities/<entity_type>/<code>", methods=["GET"])
+    def get_entity(entity_type: str, code: str):
+        """Возвращает сериализованный DTO сущности по коду."""
+        return jsonify(serializer.serialize(entities.get(entity_type, code)))
+
+    @api.route("/api/entities/<entity_type>/<code>", methods=["PATCH"])
+    def update_entity(entity_type: str, code: str):
+        """Разбирает частичный DTO фактического типа, не меняя вид сущности."""
+        current = entities.get(entity_type, code)
+        dto = serializer.deserialize(read_fields(), type(current), partial=True)
+        return jsonify(serializer.serialize(entities.change(entity_type, code, dto)))
+
+    @api.route("/api/entities/<entity_type>/<code>", methods=["DELETE"])
+    def delete_entity(entity_type: str, code: str):
+        """Удаляет сущность через прикладной сервис и возвращает HTTP 204."""
+        entities.delete(entity_type, code)
+        return Response(status=204)

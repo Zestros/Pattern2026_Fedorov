@@ -1,3 +1,5 @@
+from typing import Self
+
 from Src.Core.abstract_model import abstract_model
 from Src.Core.exception import  arguments_exception
 
@@ -7,6 +9,43 @@ class entity_model(abstract_model):
 
     "Наименование сущности."
     __name:str = ""
+
+    def validate_state(self) -> None:
+        """Проверяет доменные ограничения после изменения связанных сущностей."""
+
+    def updated_copy(self, fields: dict[str, object]) -> Self:
+        """Создаёт кандидат на обновление через фабричный метод модели."""
+        self.validate_fields(fields)
+        for name in fields.keys() & set(self.computed_fields):
+            raise arguments_exception(name, "Расчётное поле нельзя изменить")
+        values = {
+            name: getattr(self, name) for name in self.field_names()
+            if name not in self.computed_fields
+        }
+        values.update(fields)
+        model_type = type(self)
+        candidate = model_type.__new__(model_type)
+        values = {name: candidate if value is self else value for name, value in values.items()}
+        return model_type.from_fields(values, instance=candidate)
+
+    @property
+    def is_registered(self) -> bool:
+        """Показывает, что изменение сущности принадлежит репозиторию."""
+        return getattr(self, "_entity_model__registered", False)
+
+    def _set_registered(self, registered: bool) -> None:
+        """Фиксирует регистрацию сущности при успешной операции репозитория."""
+        object.__setattr__(self, "_entity_model__registered", registered)
+
+    def _ensure_editable(self) -> None:
+        """Защищает зарегистрированную сущность от изменения в обход репозитория."""
+        if self.is_registered:
+            raise arguments_exception("entity", "Изменяйте зарегистрированную сущность через репозиторий")
+
+    def __setattr__(self, name: str, value: object) -> None:
+        """Проверяет доступность изменений до вызова сеттера."""
+        self._ensure_editable()
+        super().__setattr__(name, value)
 
     @property
     def name(self) -> str:
