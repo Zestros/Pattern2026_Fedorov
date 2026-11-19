@@ -17,7 +17,7 @@ from Src.Models.unit_model import unit_model
 from Src.Models.warehouse_model import warehouse_model
 
 
-from Src.Logics.entity_repository import entity_repository
+from Src.Logics.storage_repository import storage_repository
 
 
 class storage_manager(abstract_manager, abstract_entity_repository):
@@ -42,7 +42,7 @@ class storage_manager(abstract_manager, abstract_entity_repository):
 
             validator.validate(settings, settings_model, field="settings")
             self.__settings = settings
-            self.__repository = entity_repository()
+            self.__repository = storage_repository()
             self._is_loaded = False
             self.convert()
             self.__initialized = True
@@ -97,7 +97,7 @@ class storage_manager(abstract_manager, abstract_entity_repository):
             self._is_loaded = True
             return True
 
-    def get_repository(self) -> entity_repository:
+    def get_repository(self) -> storage_repository:
         """Возвращает репозиторий для подключения прикладных сценариев."""
         return self.__repository
 
