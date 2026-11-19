@@ -74,22 +74,19 @@ class unit_model(entity_model):
         """Проверяет изменяемую связь с базовой единицей."""
         self.validate_base_unit()
 
-    def updated_copy(self, fields: dict[str, object]) -> Self:
-        """Принимает null как переход к базовой единице при обновлении."""
-        self.validate_fields(fields)
-        if "base_unit" in fields and fields["base_unit"] is None:
-            fields = {**fields, "base_unit": self}
-        return super().updated_copy(fields)
+    @classmethod
+    def validate_restore_fields(cls, fields: dict[str, object]) -> None:
+        """Требует ссылку на базовую единицу в сохранённом графе."""
+        super().validate_restore_fields(fields)
+        if fields.get("base_unit") is None:
+            raise arguments_exception("base_unit", "Ожидается восстановленная базовая единица")
 
     @classmethod
     def from_fields(
         cls, fields: dict[str, object], *, instance: Self | None = None,
     ) -> Self:
-        """Инициализирует базовую единицу с сохранением ссылки на себя."""
-        base = fields["base_unit"]
-        if base is None:
-            raise arguments_exception("base_unit", "Ожидается восстановленная базовая единица")
-        if base is instance:
+        """Преобразует самоссылку кандидата в указание создать базовую единицу."""
+        if isinstance(fields, dict) and instance is not None and fields.get("base_unit") is instance:
             fields = {**fields, "base_unit": None}
         return super().from_fields(fields, instance=instance)
 

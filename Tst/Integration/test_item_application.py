@@ -30,17 +30,28 @@ def payload(storage):
     }
 
 
-def test_completed_item_routes_without_legacy_model_builders(catalog, monkeypatch):
-    """<summary>Создание, чтение, изменение и удаление номенклатуры работают при запрете старых методов from_fields и updated_copy.</summary>"""
+def test_completed_item_routes_delegate_assembly_to_model(catalog, monkeypatch):
+    """<summary>Маппер передаёт модели разрешённые ссылки при создании и только изменённые поля при PATCH.</summary>"""
     # Подготовка
     client, storage = catalog
+    from_fields = item_model.from_fields
+    updated_copy = item_model.updated_copy
+    received = {}
 
-    def forbidden(*args, **kwargs):
-        """Прерывает тест при вызове прежнего способа сборки модели."""
-        raise AssertionError("Сценарий item вызвал прежний рефлексивный адаптер")
+    def record_creation(cls, fields, *, instance=None):
+        """Записывает данные создания и передаёт их фабричному методу модели."""
+        if instance is None:
+            received["creation"] = fields.copy()
+        return from_fields(fields, instance=instance)
 
-    monkeypatch.setattr(item_model, "updated_copy", forbidden)
-    monkeypatch.setattr(item_model, "from_fields", forbidden)
+    def record_update(model, fields):
+        """Записывает поля PATCH и поручает модели собрать кандидат."""
+        received["update"] = fields.copy()
+        return updated_copy(model, fields)
+
+    monkeypatch.setattr(item_model, "from_fields", classmethod(record_creation))
+    monkeypatch.setattr(item_model, "updated_copy", record_update)
+
     # Действие
     created = client.post("/api/entities/item", json=payload(storage))
     location = created.headers["Location"]
@@ -50,6 +61,9 @@ def test_completed_item_routes_without_legacy_model_builders(catalog, monkeypatc
 
     # Проверка
     assert created.status_code == 201
+    assert received["creation"]["group"] is storage.groups[0]
+    assert received["creation"]["unit"] is storage.units[0]
+    assert received["update"] == {"name": "Новое имя"}
     assert original_response.json == created.json
     assert changed.status_code == 200
     assert changed.json["name"] == "Новое имя"

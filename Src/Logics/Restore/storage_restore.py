@@ -5,6 +5,7 @@ from Src.Logics.storage_manager import storage_manager
 from Src.Models.group_model import group_model
 from Src.Models.item_model import item_model
 from Src.Models.recipe_model import recipe_model
+from Src.Models.transaction_model import transaction_model
 from Src.Models.unit_model import unit_model
 from Src.Models.warehouse_model import warehouse_model
 
@@ -20,13 +21,16 @@ class storage_restore(abstract_object_restore):
         "units": unit_model,
         "items": item_model,
         "recipes": recipe_model,
+        "transactions": transaction_model,
     }
 
     def validate(self, node: dict) -> None:
         """Проверяет контракт коллекций до создания хранилища."""
         super().validate(node)
         fields = set(node["$fields"])
-        if fields not in (self.collection_types.keys(), self.collection_types.keys() - {"recipes"}):
+        allowed = self.collection_types.keys()
+        required = allowed - {"recipes", "transactions"}
+        if not required <= fields <= allowed:
             raise arguments_exception("$fields", "Некорректный набор коллекций хранилища")
 
     def allocate(self, node: dict) -> storage_manager:

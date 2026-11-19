@@ -146,7 +146,7 @@ def test_conflict_entity_routes_preserves_linked_entity(crud_client):
     blocked_delete = crud_client.delete(base_url)
     blocked_code = crud_client.patch(base_url, json={"name": "Откат", "unique_code": "other"})
     current = crud_client.get(base_url)
-    renamed = crud_client.patch(base_url, json={"name": "Новое имя базы"})
+    renamed = crud_client.patch(base_url, json={"name": "Новое имя базы", "base_unit": "base"})
     linked = crud_client.get(derived_url)
     freed = crud_client.patch(derived_url, json={"base_unit": None, "coefficient": 1})
     deleted = crud_client.delete(base_url)
@@ -155,6 +155,7 @@ def test_conflict_entity_routes_preserves_linked_entity(crud_client):
     assert blocked_delete.status_code == blocked_code.status_code == 409
     assert current.json() == base.json()
     assert renamed.status_code == 200
+    assert renamed.json()["base_unit"] == "base"
     assert linked.json()["base_unit"] == "base"
     assert freed.status_code == 200
     assert freed.json()["base_unit"] == "derived"
