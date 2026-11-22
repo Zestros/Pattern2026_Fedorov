@@ -59,7 +59,7 @@ paths:
   /api/reports/turnover:
     post:
       summary: Сформировать складскую оборотно-сальдовую ведомость
-      description: Обе даты входят в период. Движения до начала периода формируют начальный остаток. Фильтрация и сортировка применяются к движениям до группировки. Примеры путей — item.group.name, warehouse.unique_code и unit.base_unit.name.
+      description: Обе даты входят в период. Фильтры применяются к движениям до начала периода и к движениям внутри периода. В отчёт входят также позиции с начальным остатком без оборотов. Примеры путей — item.group.name, warehouse.unique_code и unit.base_unit.name.
       operationId: get_turnover
       parameters:
         - name: date_from
@@ -252,7 +252,7 @@ components:
                 description: Полное совпадение или поиск подстроки без учёта регистра.
               value: {type: string, minLength: 1}
         sort:
-          description: Поля перечисляются по приоритету. Для вложенной коллекции ASC берёт минимум, DESC — максимум. Отсутствующие значения идут в конце.
+          description: Поля перечисляются по приоритету. Каждый путь должен вести к одиночному полю. Отсутствующие значения идут в конце.
           type: array
           items:
             type: object

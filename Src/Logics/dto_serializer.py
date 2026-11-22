@@ -19,7 +19,7 @@ class dto_serializer:
         values = {}
         for name, field in fields.items():
             if name not in source:
-                if not partial and not field.read_only and not field.optional and not hasattr(target, name):
+                if not partial and not field.read_only and not field.optional and not field.has_default:
                     raise arguments_exception(name, "Отсутствует обязательное поле")
                 continue
             value = self.__decode(source[name], field.type, name)

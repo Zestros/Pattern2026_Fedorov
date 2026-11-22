@@ -1,4 +1,6 @@
 """Интеграционные проверки сервиса, Mapper и настоящего хранилища."""
+from functools import partial
+
 import pytest
 from Src.Core.entity_model import entity_model
 from Src.Core.filter_operator_enum import filter_operator_enum
@@ -7,7 +9,7 @@ from Src.Dtos.filter_dto import filter_dto
 from Src.Logics.dto_mapping import model_mapping, mapping_registry, dto_mapper
 from Src.Logics.dto_serializer import dto_serializer
 from Src.Logics.entity_service import entity_service
-from Src.Logics.filter_query import filter_query
+from Src.Logics.prototype import prototype
 from Src.Logics.resource_catalog import resource_catalog, resource_definition
 from Src.Logics.storage_manager import storage_manager
 from Src.Models.settings_model import settings_model
@@ -38,8 +40,10 @@ def test_completed_entity_service_crud_new_registered_resource(empty_storage):
     # Подготовка
     registry = mapping_registry((model_mapping(category_dto, category_model),))
     resources = resource_catalog(registry, (resource_definition("category", category_dto),))
-    query = filter_query(registry.model_types(), {filter_operator_enum.EQUALS: str.endswith})
-    service = entity_service(empty_storage, dto_mapper(registry, empty_storage, resources), resources, query)
+    create_prototype = partial(prototype, model_types=registry.model_types(),
+                               operators={filter_operator_enum.EQUALS: str.endswith})
+    service = entity_service(empty_storage, dto_mapper(registry, empty_storage, resources),
+                             resources, create_prototype)
     codec = dto_serializer()
     data = {"name": "Категория", "unique_code": "category-1"}
 

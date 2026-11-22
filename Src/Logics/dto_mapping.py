@@ -92,7 +92,7 @@ class dto_mapper:
                 continue
             elif current is not None:
                 value = getattr(current, field.name)
-            elif hasattr(type(dto), field.name):
+            elif field.has_default:
                 value = getattr(type(dto), field.name)
             else:
                 continue

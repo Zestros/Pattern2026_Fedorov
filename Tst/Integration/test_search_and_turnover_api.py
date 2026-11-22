@@ -13,7 +13,6 @@ from Src.Logics.settings_manager import setting_manager
 from Src.Logics.storage_manager import storage_manager
 from Src.Models.group_model import group_model
 from Src.Models.item_model import item_model
-from Src.Models.recipe_model import recipe_model
 from Src.Models.transaction_model import transaction_model
 from Src.Models.unit_model import unit_model
 from Src.Models.warehouse_model import warehouse_model
@@ -25,8 +24,18 @@ TURNOVER_URL = "/api/reports/turnover?date_from=2026-02-01&date_to=2026-02-28"
 
 @pytest.fixture
 def search_app(monkeypatch):
-    """Создаёт HTTP-приложение с независимым складским каталогом."""
+    """Создаёт HTTP-приложение со стартовым каталогом и пустым журналом движений."""
     monkeypatch.setattr(storage_manager, "_storage_manager__instance", None)
+    monkeypatch.delattr(setting_manager, "instance", raising=False)
+    load = setting_manager.load
+
+    def load_test_settings(manager, file_name):
+        """Использует каталог и явно задаёт режим загрузки движений для тестов."""
+        load(manager, file_name)
+        manager.settings.first_start = True
+        manager.settings.seed_demo_transactions = False
+
+    monkeypatch.setattr(setting_manager, "load", load_test_settings)
     return create_app().app
 
 
@@ -61,7 +70,11 @@ def test_found_entity_search_entities_combines_code_and_nested_field(search_app,
     assert response.get_json() == [{"code": entity.unique_code, "name": name}]
 
 
-def test_sorted_groups_search_entities_respects_priorities_and_missing_parent(search_app):
+@pytest.mark.parametrize(("direction", "ordered_codes"), [
+    ("ASC", ["child-b", "child-a", "child-c", "child-d"]),
+    ("DESC", ["child-c", "child-b", "child-a", "child-d"]),
+])
+def test_sorted_groups_search_entities_respects_priorities_and_missing_parent(search_app, direction, ordered_codes):
     """<summary>Группы сортируются по имени владельца и своему имени, корневая группа идёт в конце.</summary>"""
     # Подготовка
     client = search_app.test_client()
@@ -78,14 +91,14 @@ def test_sorted_groups_search_entities_respects_priorities_and_missing_parent(se
     # Действие
     response = client.post("/api/entities/group/search", json={
         "filters": [{"field": "name", "operator": "LIKE", "value": "тест"}],
-        "sort": [{"field": "parent.name", "direction": "DESC"}, {"field": "name", "direction": "DESC"}],
+        "sort": [{"field": "parent.name", "direction": direction}, {"field": "name", "direction": "DESC"}],
     })
     cycle = client.patch("/api/entities/group/parent-a", json={"parent": "child-a"})
     self_cycle = client.patch("/api/entities/group/parent-a", json={"parent": "parent-a"})
 
     # Проверка
     assert response.status_code == 200
-    assert [row["code"] for row in response.get_json()] == ["child-c", "child-b", "child-a", "child-d"]
+    assert [row["code"] for row in response.get_json()] == ordered_codes
     assert cycle.status_code == self_cycle.status_code == 400
     assert client.get("/api/entities/group/parent-a").get_json()["parent"] is None
 
@@ -110,28 +123,21 @@ def test_found_descendants_search_entities_resolves_new_nested_path(search_app):
     assert response.get_json() == [{"code": child.unique_code, "name": child.name}]
 
 
-@pytest.mark.parametrize("direction, order", [("ASC", (0, 1, 2)), ("DESC", (1, 0, 2))])
-def test_sorted_recipes_search_entities_uses_collection_extreme(search_app, direction, order):
-    """<summary>Сортировка по составу рецепта использует минимум или максимум, пустой состав идёт в конце.</summary>"""
-    # Подготовка
-    storage = search_app.extensions["report_storage"]
-    group = storage.groups[0]
-    gram = storage.units[0]
-    cards = tuple(recipe_model(f"Тестовая карта {index}", gram) for index in range(3))
-    for card, names in zip(cards, (("Тмин", "Анис"), ("Якорь", "Базилик"))):
-        for name in names:
-            card.add_ingredient(item_model(name, name, group, gram), 1)
-    storage.register_models(cards)
-
+@pytest.mark.parametrize("filters", [
+    [],
+    [{"field": "unique_code", "operator": "EQUALS", "value": "missing-recipe"}],
+])
+def test_bad_request_search_entities_rejects_collection_sort(search_app, filters):
+    """<summary>Сортировка по коллекции ингредиентов отклоняется и на пустой выборке.</summary>"""
     # Действие
     response = search_app.test_client().post("/api/entities/recipe/search", json={
-        "filters": [{"field": "name", "operator": "LIKE", "value": "тестовая"}],
-        "sort": [{"field": "ingredients.item.name", "direction": direction}],
+        "filters": filters,
+        "sort": [{"field": "ingredients.item.name"}],
     })
 
     # Проверка
-    assert response.status_code == 200
-    assert [row["code"] for row in response.get_json()] == [cards[index].unique_code for index in order]
+    assert response.status_code == 400
+    assert "Сортировка по коллекции недоступна: ingredients.item.name" in response.get_data(as_text=True)
 
 
 @pytest.mark.parametrize("criteria", [
@@ -179,6 +185,38 @@ def test_balanced_rows_get_turnover_filters_and_sorts_movements(search_app):
     assert [(row["opening"], row["receipts"], row["issues"], row["closing"]) for row in rows] == [
         (2, 0, 0, 2),
         (10, 5, 3, 12),
+    ]
+
+
+def test_combined_rows_get_turnover_keeps_opening_and_period_only_groups(search_app):
+    """<summary>Общий фильтр и сортировка действуют на строки с остатком и строки с оборотами периода.</summary>"""
+    # Подготовка
+    storage = search_app.extensions["report_storage"]
+    flour = next(item for item in storage.items if item.name == "Мука")
+    water = next(item for item in storage.items if item.name == "Вода")
+    hall = warehouse_model("Зал")
+    bar = warehouse_model("Бар")
+    storage.register_models((
+        transaction_model(datetime(2026, 1, 31), hall, flour, flour.unit.base_unit, 4),
+        transaction_model(datetime(2026, 2, 1), bar, flour, flour.unit.base_unit, 7),
+        transaction_model(datetime(2026, 1, 31), bar, water, water.unit.base_unit, 2),
+        transaction_model(datetime(2026, 2, 1), hall, water, water.unit.base_unit, 5),
+    ))
+
+    # Действие
+    response = search_app.test_client().post(TURNOVER_URL, json={
+        "filters": [{"field": "item.unique_code", "operator": "EQUALS", "value": flour.unique_code}],
+        "sort": [{"field": "warehouse.name", "direction": "ASC"}],
+    })
+
+    # Проверка
+    assert response.status_code == 200
+    rows = response.get_json()
+    assert [row["warehouse_name"] for row in rows] == ["Бар", "Зал"]
+    assert all(row["item_code"] == flour.unique_code for row in rows)
+    assert [(row["opening"], row["receipts"], row["issues"], row["closing"]) for row in rows] == [
+        (0, 7, 0, 7),
+        (4, 0, 0, 4),
     ]
 
 

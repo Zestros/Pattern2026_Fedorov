@@ -1,11 +1,10 @@
+from collections.abc import Callable, Iterable
 from datetime import date
 
 from Src.Core.abstract_entity_repository import abstract_entity_repository
 from Src.Core.exception import arguments_exception
-from Src.Core.filter_criteria import filter_criteria, filter_item
 from Src.Dtos.filter_dto import filter_dto
 from Src.Dtos.turnover_row_dto import turnover_row_dto
-from Src.Logics.filter_query import filter_query
 from Src.Logics.prototype import prototype
 from Src.Models.transaction_model import transaction_model
 
@@ -13,41 +12,73 @@ from Src.Models.transaction_model import transaction_model
 class turnover_service:
     """Формирует количественную ОСВ из отобранных складских движений."""
 
-    def __init__(self, repository: abstract_entity_repository, query: filter_query) -> None:
-        """Получает журнал движений и преобразователь DTO в критерии."""
+    def __init__(
+        self, repository: abstract_entity_repository, create_prototype: Callable[..., prototype],
+    ) -> None:
+        """Получает журнал движений и способ создать настроенный прототип."""
         self.__repository = repository
-        self.__query = query
+        self.__create_prototype = create_prototype
 
     def build(self, criteria: filter_dto, date_from: date, date_to: date) -> tuple[turnover_row_dto, ...]:
-        """Отбирает движения по фильтрам и рассчитывает итоги по складу и товару."""
+        """Рассчитывает начальные остатки, затем обороты за период и итоговые строки."""
         if date_from > date_to:
             raise arguments_exception("date_to", "Конец периода должен быть не раньше начала")
-        rules = self.__query.prepare(transaction_model, criteria)
-        period = filter_item(("occurred_at",), lambda timestamp, end: timestamp.date() <= end, date_to)
-        report_criteria = filter_criteria((*rules.filters, period), rules.sort)
-        source = prototype(self.__repository.list(transaction_model), report_criteria)
 
-        groups: dict[tuple[str, str], list[transaction_model]] = {}
-        for movement in source.clone().data:
-            key = (movement.warehouse.unique_code, movement.item.unique_code)
-            groups.setdefault(key, []).append(movement)
-        return tuple(self.__row(movements, date_from) for movements in groups.values())
+        movements = self.__repository.list(transaction_model)
+        filters = filter_dto(filters=criteria.filters)
+        history = self.__select((row for row in movements if row.occurred_at.date() < date_from), filters)
+        opening_balances: dict[tuple[str, str], float] = {}
+        for row in history:
+            key = self.__group_key(row)
+            opening_balances[key] = opening_balances.get(key, 0.0) + row.quantity
+
+        period = self.__select(
+            (row for row in movements if date_from <= row.occurred_at.date() <= date_to),
+            filters,
+        )
+        period_groups: dict[tuple[str, str], list[transaction_model]] = {}
+        for row in period:
+            period_groups.setdefault(self.__group_key(row), []).append(row)
+
+        selected_codes = {row.unique_code for row in history}
+        selected_codes.update(row.unique_code for row in period)
+        # Сохраняем порядок журнала для движений с равными ключами сортировки.
+        ordered: Iterable[transaction_model] = (row for row in movements if row.unique_code in selected_codes)
+        if criteria.sort:
+            ordered = self.__select(ordered, filter_dto(sort=criteria.sort))
+
+        rows: dict[tuple[str, str], turnover_row_dto] = {}
+        for movement in ordered:
+            key = self.__group_key(movement)
+            if key not in rows:
+                rows[key] = self.__row(movement, opening_balances.get(key, 0.0), period_groups.get(key, ()))
+        return tuple(rows.values())
+
+    def __select(
+        self, movements: Iterable[transaction_model], criteria: filter_dto,
+    ) -> tuple[transaction_model, ...]:
+        """Клонирует коллекцию движений с указанными условиями или сортировкой."""
+        return self.__create_prototype(movements, criteria, transaction_model).clone().data
 
     @staticmethod
-    def __row(movements: list[transaction_model], date_from: date) -> turnover_row_dto:
-        """Считает начальный остаток и обороты в базовой единице строки."""
-        opening = receipts = issues = 0.0
-        for row in movements:
-            if row.occurred_at.date() < date_from:
-                opening += row.quantity
-            elif row.quantity > 0:
+    def __group_key(movement: transaction_model) -> tuple[str, str]:
+        """Возвращает ключ остатка по складу и номенклатуре."""
+        return movement.warehouse.unique_code, movement.item.unique_code
+
+    @staticmethod
+    def __row(
+        movement: transaction_model, opening: float, period: Iterable[transaction_model],
+    ) -> turnover_row_dto:
+        """Суммирует поступления и списания периода и формирует строку."""
+        receipts = issues = 0.0
+        for row in period:
+            if row.quantity > 0:
                 receipts += row.quantity
             else:
                 issues -= row.quantity
-        first = movements[0]
         return turnover_row_dto(
-            warehouse_code=first.warehouse.unique_code, warehouse_name=first.warehouse.name,
-            item_code=first.item.unique_code, item_name=first.item.name,
-            unit_code=first.unit.unique_code, unit_name=first.unit.name,
+            warehouse_code=movement.warehouse.unique_code, warehouse_name=movement.warehouse.name,
+            item_code=movement.item.unique_code, item_name=movement.item.name,
+            unit_code=movement.unit.unique_code, unit_name=movement.unit.name,
             opening=opening, receipts=receipts, issues=issues, closing=opening + receipts - issues,
         )
