@@ -3,7 +3,9 @@ from datetime import date
 
 from Src.Core.abstract_entity_repository import abstract_entity_repository
 from Src.Core.exception import arguments_exception
+from Src.Core.filter_operator_enum import filter_operator_enum
 from Src.Dtos.filter_dto import filter_dto
+from Src.Dtos.filter_item_dto import filter_item_dto
 from Src.Dtos.turnover_row_dto import turnover_row_dto
 from Src.Logics.prototype import prototype
 from Src.Models.transaction_model import transaction_model
@@ -25,27 +27,23 @@ class turnover_service:
             raise arguments_exception("date_to", "Конец периода должен быть не раньше начала")
 
         movements = self.__repository.list(transaction_model)
-        filters = filter_dto(filters=criteria.filters)
-        history = self.__select((row for row in movements if row.occurred_at.date() < date_from), filters)
+        before_start = filter_item_dto(field="occurred_at", operator=filter_operator_enum.BEFORE, value=date_from)
+        history = self.__select(movements, filter_dto(filters=(before_start, *criteria.filters)))
         opening_balances: dict[tuple[str, str], float] = {}
         for row in history:
             key = self.__group_key(row)
             opening_balances[key] = opening_balances.get(key, 0.0) + row.quantity
 
-        period = self.__select(
-            (row for row in movements if date_from <= row.occurred_at.date() <= date_to),
-            filters,
-        )
+        from_start = filter_item_dto(field="occurred_at", operator=filter_operator_enum.ON_OR_AFTER, value=date_from)
+        through_end = filter_item_dto(field="occurred_at", operator=filter_operator_enum.ON_OR_BEFORE, value=date_to)
+        period = self.__select(movements, filter_dto(filters=(from_start, through_end, *criteria.filters)))
         period_groups: dict[tuple[str, str], list[transaction_model]] = {}
         for row in period:
             period_groups.setdefault(self.__group_key(row), []).append(row)
 
-        selected_codes = {row.unique_code for row in history}
-        selected_codes.update(row.unique_code for row in period)
-        # Сохраняем порядок журнала для движений с равными ключами сортировки.
-        ordered: Iterable[transaction_model] = (row for row in movements if row.unique_code in selected_codes)
-        if criteria.sort:
-            ordered = self.__select(ordered, filter_dto(sort=criteria.sort))
+        ordered = self.__select(
+            movements, filter_dto(filters=(through_end, *criteria.filters), sort=criteria.sort),
+        )
 
         rows: dict[tuple[str, str], turnover_row_dto] = {}
         for movement in ordered:

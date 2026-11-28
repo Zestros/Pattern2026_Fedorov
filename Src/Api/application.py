@@ -4,7 +4,7 @@ from Src.Logics.dto_mapping import dto_mapper
 from Src.Logics.dto_serializer import dto_serializer
 
 from functools import partial
-from operator import eq
+from operator import eq, ge, le, lt
 from pathlib import Path
 
 import connexion
@@ -44,6 +44,9 @@ def create_app():
     create_prototype = partial(prototype, model_types=mappings.model_types(), operators={
         filter_operator_enum.EQUALS: eq,
         filter_operator_enum.LIKE: lambda actual, expected: expected.casefold() in actual.casefold(),
+        filter_operator_enum.BEFORE: lt,
+        filter_operator_enum.ON_OR_AFTER: ge,
+        filter_operator_enum.ON_OR_BEFORE: le,
     })
     entities = entity_service(repository, dto_mapper(mappings, repository, resources), resources, create_prototype)
     turnover = turnover_service(repository, create_prototype)

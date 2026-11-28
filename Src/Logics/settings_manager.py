@@ -3,10 +3,14 @@ from Src.Core.exception import arguments_exception
 from Src.Core.validator import validator, operation_exception
 from Src.Logics.reference_restore import reference_restore
 from Src.Models.settings_model import settings_model
+from Src.Core.abstract_observation import abstract_observation
+from Src.Core.event_type import event_type
 
-class setting_manager(abstract_manager):
+
+class setting_manager(abstract_manager, abstract_observation):
     __default_file_name: str = 'settings.json'
     __settings: settings_model = None
+
 
     def __new__(cls):
         """Создаёт единственный экземпляр или возвращает существующий."""
@@ -56,3 +60,12 @@ class setting_manager(abstract_manager):
             return True
         except arguments_exception as error:
             raise operation_exception(f"Не удалось преобразовать настройки. {error}") from error
+
+
+    def handler(self, event_types: str, params: object) -> None:
+        """Выполнить обработку события"""
+        self.__event_types = event_type.change_settings()
+
+        if event_types == event_type.change_settings():
+            print("Обновлены настройки")
+

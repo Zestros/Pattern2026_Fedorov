@@ -1,6 +1,6 @@
 """Интеграционные проверки поиска справочников и складской ОСВ."""
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 
@@ -142,6 +142,7 @@ def test_bad_request_search_entities_rejects_collection_sort(search_app, filters
 
 @pytest.mark.parametrize("criteria", [
     {"filters": [{"field": "name", "operator": "INVALID", "value": "Мука"}]},
+    {"filters": [{"field": "name", "operator": "BEFORE", "value": "2026-02-01"}]},
     {"filters": [{"field": "name", "operator": "LIKE", "value": " "}]},
     {"sort": [{"field": "group.__dict__"}]},
     {"sort": [{"field": "name", "direction": "INVALID"}]},
@@ -154,7 +155,7 @@ def test_bad_request_search_entities_rejects_invalid_criteria(search_app, criter
 
 
 def test_balanced_rows_get_turnover_filters_and_sorts_movements(search_app):
-    """<summary>ОСВ учитывает граничные даты, пересчёт единиц, фильтр и отдельные остатки складов.</summary>"""
+    """<summary>ОСВ учитывает календарные границы в часовом поясе движения, пересчёт единиц и фильтр по товару.</summary>"""
     # Подготовка
     storage = search_app.extensions["report_storage"]
     flour = next(item for item in storage.items if item.name == "Мука")
@@ -162,10 +163,11 @@ def test_balanced_rows_get_turnover_filters_and_sorts_movements(search_app):
     gram = flour.unit.base_unit
     main_warehouse = storage.warehouses[0]
     other_warehouse = warehouse_model("Второй склад")
+    movement_zone = timezone(timedelta(hours=-8))
     storage.register_models((
-        transaction_model(datetime(2026, 1, 31, 23, 59), main_warehouse, flour, gram, 10),
+        transaction_model(datetime(2026, 1, 31, 23, 59, tzinfo=movement_zone), main_warehouse, flour, gram, 10),
         transaction_model(datetime(2026, 2, 1), main_warehouse, flour, flour.unit, 0.005),
-        transaction_model(datetime(2026, 2, 28, 23, 59), main_warehouse, flour, gram, -3),
+        transaction_model(datetime(2026, 2, 28, 23, 59, tzinfo=movement_zone), main_warehouse, flour, gram, -3),
         transaction_model(datetime(2026, 3, 1), main_warehouse, flour, gram, 20),
         transaction_model(datetime(2026, 2, 10), main_warehouse, water, water.unit, 7),
         transaction_model(datetime(2026, 1, 20), other_warehouse, flour, gram, 2),

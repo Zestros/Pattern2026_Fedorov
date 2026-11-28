@@ -47,11 +47,13 @@ class field_path:
                     pending.append((getattr(value, self.__parts[index], None), index + 1))
 
     @classmethod
-    def resolve(cls, model: type[abstract_model], field: str,
-                variants: tuple[type[abstract_model], ...]) -> "field_path":
-        """Находит типы сегментов пути к имени или коду даже при пустых данных."""
+    def resolve(
+        cls, model: type[abstract_model], field: str, variants: tuple[type[abstract_model], ...],
+        *, value_type: type = str,
+    ) -> "field_path":
+        """Проверяет сегменты пути и ожидаемый тип конечного значения."""
         parts = tuple(field.split("."))
-        if parts[-1] not in ("name", "unique_code"):
+        if value_type is str and parts[-1] not in ("name", "unique_code"):
             raise arguments_exception("field", f"Недоступное поле: {field}")
 
         candidates = {(model, False)}
@@ -63,7 +65,7 @@ class field_path:
             }
             if not candidates:
                 break
-        matches = {is_collection for field_type, is_collection in candidates if field_type is str}
+        matches = {is_collection for field_type, is_collection in candidates if issubclass(field_type, value_type)}
         if not matches:
             raise arguments_exception("field", f"Недоступное поле: {field}")
         return cls(parts, True in matches)
