@@ -5,11 +5,13 @@ from Src.Logics.dto_mapping import mapping_registry
 
 class resource_definition:
     """Внешнее имя, основной DTO и признаки специализированных контрактов."""
-    def __init__(self, name: str, dto_type: type[abstract_dto], variants: dict | None = None) -> None:
-        """Сохраняет явно зарегистрированные варианты входного контракта."""
+    def __init__(self, name: str, dto_type: type[abstract_dto], variants: dict | None = None,
+                 *, searchable: bool = True) -> None:
+        """Сохраняет варианты входного контракта и доступность поиска."""
         self.name = name
         self.dto_type = dto_type
         self.variants = variants or {}
+        self.searchable = searchable
 
 
 class resource_catalog:
@@ -38,6 +40,13 @@ class resource_catalog:
     def model_type(self, name: str) -> type:
         """Возвращает зарегистрированный доменный тип ресурса."""
         return self.__mappings.for_type(self.resource(name).dto_type).model
+
+    def search_model_type(self, name: str) -> type:
+        """Возвращает доменный тип ресурса, у которого доступен поиск."""
+        resource = self.resource(name)
+        if not resource.searchable:
+            raise arguments_exception("entity_type", "Поиск по этому ресурсу недоступен")
+        return self.__mappings.for_type(resource.dto_type).model
 
     def request_type(self, name: str, fields: dict) -> type[abstract_dto]:
         """Выбирает DTO по присутствующему признаку, отклоняя неоднозначность."""

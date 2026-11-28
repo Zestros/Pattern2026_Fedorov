@@ -15,6 +15,8 @@ class settings_model(abstract_model):
     __account_name: str = ""
     # Флаг первого старта
     __first_start: bool = True
+    # Признак добавления демонстрационных складских движений при первом запуске.
+    __seed_demo_transactions: bool = False
 
     @property
     def company(self) -> company_model | None:
@@ -62,6 +64,17 @@ class settings_model(abstract_model):
         """Устанавливает признак первого запуска."""
         validator.validate(value, bool, field="first_start")
         self.__first_start = value
+
+    @property
+    def seed_demo_transactions(self) -> bool:
+        """Возвращает признак загрузки демонстрационных движений."""
+        return self.__seed_demo_transactions
+
+    @seed_demo_transactions.setter
+    def seed_demo_transactions(self, value: bool) -> None:
+        """Разрешает или отключает загрузку демонстрационных движений."""
+        validator.validate(value, bool, field="seed_demo_transactions")
+        self.__seed_demo_transactions = value
 
     __response_format: report_type_enum = report_type_enum.TXT
 

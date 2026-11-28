@@ -245,13 +245,13 @@ def test_arguments_exception_storage_manager_duplicate_code(manager):
 
 
 @pytest.mark.parametrize("missing_relation", ["group", "unit"])
-def test_arguments_exception_add_item_missing_relation(
+def test_registered_dependencies_add_item_missing_relation(
     manager, models, missing_relation
 ):
     """
     <summary>
-    Номенклатура не добавляется без зарегистрированной группы или единицы.
-    При ошибке коллекция номенклатуры остаётся пустой.
+    Номенклатура автоматически регистрирует отсутствующую группу или единицу.
+    Уже сохранённые зависимости переиспользуются без дублирования.
     </summary>
     """
     # Подготовка
@@ -261,18 +261,21 @@ def test_arguments_exception_add_item_missing_relation(
         manager.add_unit(models["unit"])
 
     # Действие
-    with pytest.raises(arguments_exception):
-        manager.add_item(models["item"])
+    manager.add_item(models["item"])
 
     # Проверка
-    assert not manager.items
+    assert manager.items == (models["item"],)
+    assert manager.groups == (models["group"],)
+    assert manager.units == (models["unit"],)
+    assert manager.items[0].group is manager.groups[0]
+    assert manager.items[0].unit is manager.units[0]
 
 
-def test_arguments_exception_add_unit_missing_base(manager):
+def test_registered_base_add_unit_missing_base(manager):
     """
     <summary>
-    Производная единица не добавляется, пока её базовая единица
-    не зарегистрирована в хранилище.
+    Добавление производной единицы регистрирует её базовую единицу.
+    Самоссылка базы не вызывает повторного обхода.
     </summary>
     """
     # Подготовка
@@ -280,11 +283,13 @@ def test_arguments_exception_add_unit_missing_base(manager):
     kilogram = unit_model("килограмм", 1000, gram)
 
     # Действие
-    with pytest.raises(arguments_exception):
-        manager.add_unit(kilogram)
+    manager.add_unit(kilogram)
 
     # Проверка
-    assert not manager.units
+    assert manager.find(unit_model, gram.unique_code) is gram
+    assert manager.find(unit_model, kilogram.unique_code) is kilogram
+    assert len(manager.units) == 2
+    assert gram.base_unit is gram
 
 
 def test_added_unit_add_unit_registered_base(manager):

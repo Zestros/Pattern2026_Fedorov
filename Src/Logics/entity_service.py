@@ -1,7 +1,12 @@
+from collections.abc import Callable, Iterable
+
 from Src.Core.abstract_dto import abstract_dto
 from Src.Core.abstract_entity_repository import abstract_entity_repository
+from Src.Core.entity_model import entity_model
 from Src.Dtos.entity_dto import entity_summary_dto
+from Src.Dtos.filter_dto import filter_dto
 from Src.Logics.dto_mapping import dto_mapper
+from Src.Logics.prototype import prototype
 from Src.Logics.resource_catalog import resource_catalog
 
 
@@ -12,11 +17,13 @@ class entity_not_found_exception(Exception):
 
 class entity_service:
     """Координирует операции сущностей через общий Mapper и репозиторий."""
-    def __init__(self, repository: abstract_entity_repository, mapper: dto_mapper, resources: resource_catalog) -> None:
+    def __init__(self, repository: abstract_entity_repository, mapper: dto_mapper,
+                 resources: resource_catalog, create_prototype: Callable[..., prototype]) -> None:
         """Получает зависимости для операций с сущностями."""
         self.__repository = repository
         self.__mapper = mapper
         self.__resources = resources
+        self.__create_prototype = create_prototype
 
     def model_type(self, resource: str) -> type:
         """Возвращает тип модели зарегистрированного ресурса."""
@@ -31,8 +38,18 @@ class entity_service:
 
     def list(self, resource: str) -> tuple[entity_summary_dto, ...]:
         """Возвращает краткие DTO сущностей выбранного ресурса."""
-        return tuple(entity_summary_dto(code=model.unique_code, name=model.name)
-                     for model in self.__repository.list(self.model_type(resource)))
+        return self.__summaries(self.__repository.list(self.model_type(resource)))
+
+    def search(self, resource: str, criteria: filter_dto) -> tuple[entity_summary_dto, ...]:
+        """Отбирает и сортирует доменные модели до преобразования в краткие DTO."""
+        model = self.__resources.search_model_type(resource)
+        source = self.__create_prototype(self.__repository.list(model), criteria, model)
+        return self.__summaries(source.clone().data)
+
+    @staticmethod
+    def __summaries(models: Iterable[entity_model]) -> tuple[entity_summary_dto, ...]:
+        """Преобразует сущности списка или поиска в одинаковое представление."""
+        return tuple(entity_summary_dto(code=model.unique_code, name=model.name) for model in models)
 
     def create(self, dto: abstract_dto) -> abstract_dto:
         """Создаёт модель через Mapper, регистрирует её и возвращает DTO."""

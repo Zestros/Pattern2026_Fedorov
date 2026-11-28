@@ -8,16 +8,17 @@ from Src.Core.abstract_manager import abstract_manager
 from Src.Core.entity_model import entity_model
 from Src.Core.exception import arguments_exception
 from Src.Core.validator import operation_exception, validator
-from Src.Logics.initial_catalog import initial_catalog
+from Src.Logics.initial_catalog import demo_transactions, initial_catalog
 from Src.Models.group_model import group_model
 from Src.Models.item_model import item_model
 from Src.Models.recipe_model import recipe_model
 from Src.Models.settings_model import settings_model
+from Src.Models.transaction_model import transaction_model
 from Src.Models.unit_model import unit_model
 from Src.Models.warehouse_model import warehouse_model
 
 
-from Src.Logics.entity_repository import entity_repository
+from Src.Logics.storage_repository import storage_repository
 
 
 class storage_manager(abstract_manager, abstract_entity_repository):
@@ -42,7 +43,7 @@ class storage_manager(abstract_manager, abstract_entity_repository):
 
             validator.validate(settings, settings_model, field="settings")
             self.__settings = settings
-            self.__repository = entity_repository()
+            self.__repository = storage_repository()
             self._is_loaded = False
             self.convert()
             self.__initialized = True
@@ -82,6 +83,11 @@ class storage_manager(abstract_manager, abstract_entity_repository):
         """Возвращает самостоятельные и вложенные карты."""
         return self.list(recipe_model)
 
+    @property
+    def transactions(self) -> tuple[transaction_model, ...]:
+        """Возвращает зарегистрированные складские движения."""
+        return self.list(transaction_model)
+
     def convert(self) -> bool:
         """Регистрирует стартовые модели один раз с учётом настроек."""
         with self.__initialization_lock:
@@ -90,14 +96,16 @@ class storage_manager(abstract_manager, abstract_entity_repository):
 
             if self.__settings.first_start:
                 try:
-                    self.register_models(initial_catalog())
+                    catalog = initial_catalog()
+                    movements = demo_transactions(catalog) if self.__settings.seed_demo_transactions else ()
+                    self.register_models((*catalog, *movements))
                 except arguments_exception as error:
                     raise operation_exception("Не удалось подготовить данные хранилища") from error
 
             self._is_loaded = True
             return True
 
-    def get_repository(self) -> entity_repository:
+    def get_repository(self) -> storage_repository:
         """Возвращает репозиторий для подключения прикладных сценариев."""
         return self.__repository
 

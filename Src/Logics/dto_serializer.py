@@ -1,3 +1,4 @@
+from enum import Enum
 import math
 from types import UnionType
 from typing import get_args, get_origin
@@ -18,7 +19,7 @@ class dto_serializer:
         values = {}
         for name, field in fields.items():
             if name not in source:
-                if not partial and not field.read_only and not field.optional and not hasattr(target, name):
+                if not partial and not field.read_only and not field.optional and not field.has_default:
                     raise arguments_exception(name, "Отсутствует обязательное поле")
                 continue
             value = self.__decode(source[name], field.type, name)
@@ -37,6 +38,9 @@ class dto_serializer:
         for option in options:
             if isinstance(option, type) and issubclass(option, abstract_dto) and isinstance(value, dict):
                 return self.deserialize(value, option)
+            if isinstance(option, type) and issubclass(option, Enum) and isinstance(value, str):
+                if value in option.__members__:
+                    return option[value]
             if get_origin(option) is tuple and isinstance(value, list):
                 return tuple(self.__decode(item, get_args(option)[0], name) for item in value)
             if option in (str, bool, int, float) and type(value) is option:
@@ -50,6 +54,8 @@ class dto_serializer:
         if isinstance(source, abstract_dto):
             return {field.name: self.serialize(source.field_value(field.name))
                     for field in source.fields() if source.contains(field.name)}
+        if isinstance(source, Enum):
+            return source.name
         if isinstance(source, (tuple, list)):
             return [self.serialize(item) for item in source]
         if source is None or type(source) in (str, int, float, bool):

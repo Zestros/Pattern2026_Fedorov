@@ -9,8 +9,8 @@ from Src.Logics.reference_graph import reference_graph
 from Src.Logics.entity_state import entity_state
 
 
-class entity_repository(abstract_entity_repository):
-    """Хранит идентичность сущностей; передаёт работу со связями отдельному графу."""
+class storage_repository(abstract_entity_repository):
+    """Хранит объекты по коду и атомарно регистрирует граф их зависимостей."""
     def __init__(self) -> None:
         """Создаёт независимый каталог, граф ссылок и общую блокировку операций."""
         self.__models = {}
@@ -84,10 +84,20 @@ class entity_repository(abstract_entity_repository):
                 if new_code in self.__models:
                     raise entity_conflict_exception("unique_code", "Объект с таким кодом уже существует")
 
-            new_targets = self.__graph.validate_targets(self.__models, {}, candidate, original=model)
+            pending = {new_code: candidate}
+            self.__collect_dependencies(pending, original=model)
+            del pending[new_code]
+            new_targets = self.__graph.validate_targets(self.__models, pending, candidate, original=model)
+            for value in pending.values():
+                self.__graph.validate_targets(self.__models, pending, value)
             old_targets = self.__graph.targets(model)
             with entity_state.apply(model, candidate):
                 self.__graph.validate_affected(self.__models, old_code, model)
+                for value in pending.values():
+                    value.validate_state()
+                outgoing = {code: self.__graph.targets(value) for code, value in pending.items()}
+
+            self.__publish(pending, outgoing)
 
             self.__graph.remove(old_code, old_targets)
             if new_code != old_code:
@@ -97,21 +107,43 @@ class entity_repository(abstract_entity_repository):
             return model
 
     def register_models(self, values: Iterable[entity_model]) -> None:
-        """Регистрирует пакет атомарно с учётом связей между его сущностями."""
+        """Регистрирует корни и ещё не сохранённые зависимости единым пакетом."""
         with self.__lock:
             pending: dict[str, entity_model] = {}
             for value in values:
                 validator.validate(value, entity_model)
                 self.__stage(pending, value)
 
+            self.__collect_dependencies(pending)
             outgoing = {}
             for code, value in pending.items():
                 outgoing[code] = self.__graph.validate_targets(self.__models, pending, value)
                 value.validate_state()
-            self.__models.update(pending)
-            for code, value in pending.items():
-                self.__graph.add(code, outgoing[code])
-                value._set_registered(True)
+            self.__publish(pending, outgoing)
+
+    def __collect_dependencies(self, pending: dict, original: entity_model | None = None) -> None:
+        """Обходит каждый новый объект один раз, переиспользуя сохранённые зависимости."""
+        queue = list(pending.values())
+        while queue:
+            owner = queue.pop()
+            for field, target in self.__graph.references(owner):
+                validator.validate(target, entity_model, field=field)
+                if target is original:
+                    continue
+                known = pending.get(target.unique_code) or self.__models.get(target.unique_code)
+                if known is target:
+                    continue
+                if known is not None:
+                    raise entity_conflict_exception(field, "Разные объекты имеют одинаковый код")
+                self.__stage(pending, target)
+                queue.append(target)
+
+    def __publish(self, pending: dict, outgoing: dict) -> None:
+        """Публикует проверенные объекты и связи под общей блокировкой репозитория."""
+        self.__models.update(pending)
+        for code, value in pending.items():
+            self.__graph.add(code, outgoing[code])
+            value._set_registered(True)
 
     def __stage(self, pending: dict[str, entity_model], value: entity_model) -> None:
         """Отклоняет повторную регистрацию и конфликт кода между типами."""

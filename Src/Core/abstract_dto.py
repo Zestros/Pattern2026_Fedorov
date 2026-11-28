@@ -1,24 +1,12 @@
 from functools import lru_cache
+from inspect import getattr_static, getmembers_static
 from typing import get_type_hints
 
-
-class dto_field:
-    """Тип поля и простые правила его передачи и связывания."""
-    def __init__(self, name: str, field_type: object, dto_type: type) -> None:
-        """Читает правила поля из описания DTO с учётом наследования."""
-        self.name = name
-        self.type = field_type
-        self.reference = None
-        self.read_only = False
-        self.optional = False
-        for parent in reversed(dto_type.__mro__):
-            self.reference = parent.__dict__.get("_references", {}).get(name, self.reference)
-            self.read_only |= name in parent.__dict__.get("_read_only_fields", ())
-            self.optional |= name in parent.__dict__.get("_optional_fields", ())
+from Src.Core.dto_field import dto_field
 
 
 class abstract_dto:
-    """Аннотации задают контракт; экземпляр хранит только переданные поля."""
+    """Описывает поля DTO и учитывает явно переданные или присвоенные значения."""
     def __init__(self, **values: object) -> None:
         """Сохраняет только переданные поля, отличая пропуск значения от None."""
         allowed = {field.name for field in self.fields()}
@@ -33,11 +21,16 @@ class abstract_dto:
     @classmethod
     @lru_cache(maxsize=None)
     def fields(cls) -> tuple[dto_field, ...]:
-        """Возвращает кешированное описание полей DTO по простым аннотациям."""
-        return tuple(dto_field(name, hint, cls) for name, hint in get_type_hints(cls).items())
+        """Возвращает кешированное описание аннотаций и свойств с сеттерами."""
+        hints = get_type_hints(cls)
+        for name, descriptor in getmembers_static(cls):
+            if name.startswith("_") or not isinstance(descriptor, property) or descriptor.fset is None:
+                continue
+            hints[name] = get_type_hints(descriptor.fget)["return"]
+        return tuple(dto_field(name, hint, cls) for name, hint in hints.items())
 
     def contains(self, name: str) -> bool:
-        """Проверяет, было ли поле явно передано в DTO."""
+        """Проверяет, было ли поле явно передано или присвоено."""
         return name in self.__provided
 
     def field_value(self, name: str) -> object:
@@ -47,9 +40,13 @@ class abstract_dto:
         return getattr(self, name)
 
     def __setattr__(self, name: str, value: object) -> None:
-        """Запрещает изменение полей после создания согласованного DTO."""
-        raise AttributeError("DTO неизменяем: создайте новый экземпляр")
+        """Разрешает присваивание через явно объявленный сеттер DTO."""
+        descriptor = getattr_static(type(self), name, None)
+        if name.startswith("_") or not isinstance(descriptor, property) or descriptor.fset is None:
+            raise AttributeError("Поле DTO доступно только для чтения")
+        object.__setattr__(self, name, value)
+        object.__setattr__(self, "_abstract_dto__provided", self.__provided | {name})
 
     def __delattr__(self, name: str) -> None:
         """Запрещает удаление полей в обход учёта их присутствия."""
-        raise AttributeError("DTO неизменяем: создайте новый экземпляр")
+        raise AttributeError("Удаление полей DTO запрещено")

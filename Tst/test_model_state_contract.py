@@ -67,7 +67,7 @@ def test_preserved_model_reference_restore_new_computed_property(monkeypatch):
     source.temporary_note = "Не сохранять"
     data = convert_factory().create(source).convert(source)
     restored = reference_restore().restore(data)
-    assert set(data["value"]["$fields"]) == {"unique_code", "name"}
+    assert set(data["value"]["$fields"]) == {"unique_code", "name", "parent"}
     assert restored.name == source.name
     assert restored.unique_code == source.unique_code
     assert not hasattr(restored, "temporary_note")

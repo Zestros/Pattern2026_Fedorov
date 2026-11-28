@@ -1,5 +1,3 @@
-from inspect import signature
-from collections.abc import Callable
 from Src.Core.abstract_dto import abstract_dto
 from Src.Core.abstract_entity_repository import abstract_entity_repository
 from Src.Core.abstract_model import abstract_model
@@ -8,16 +6,12 @@ from Src.Core.exception import arguments_exception
 
 
 class model_mapping:
-    """Регистрация типа и особых операций заполнения агрегата."""
-    def __init__(self, dto: type[abstract_dto], model: type[abstract_model],
-                 writers: dict[str, Callable] | None = None,
-                 factory: Callable | None = None) -> None:
-        """Регистрирует типы, параметры конструктора и особые способы заполнения."""
+    """Соответствие DTO и доменного типа."""
+
+    def __init__(self, dto: type[abstract_dto], model: type[abstract_model]) -> None:
+        """Регистрирует пару типов для преобразования в обе стороны."""
         self.dto = dto
         self.model = model
-        self.factory = factory
-        self.parameters = frozenset(signature(model).parameters)
-        self.writers = writers or {}
 
 
 class mapping_registry:
@@ -28,6 +22,10 @@ class mapping_registry:
         self.__model = {mapping.model: mapping for mapping in mappings}
         if len(self.__dto) != len(mappings) or len(self.__model) != len(mappings):
             raise ValueError("Повторная регистрация маппинга")
+
+    def model_types(self) -> tuple[type[abstract_model], ...]:
+        """Возвращает доменные типы, зарегистрированные для обмена данными."""
+        return tuple(self.__model)
 
     def for_type(self, dto_type: type[abstract_dto]) -> model_mapping:
         """Возвращает регистрацию по типу DTO без знания внешних ресурсов."""
@@ -76,6 +74,7 @@ class dto_mapper:
         mapping = self.__registry.for_dto(dto)
         if current is not None and type(current) is not mapping.model:
             raise arguments_exception("type", "Тип существующей сущности нельзя изменить")
+        updating_entity = isinstance(current, entity_model)
         values = {}
         for field in mapping.dto.fields():
             if field.read_only:
@@ -89,22 +88,16 @@ class dto_mapper:
                         raise arguments_exception(field.name, "Связанная сущность не найдена")
                 else:
                     value = self.__import(value)
+            elif updating_entity:
+                continue
             elif current is not None:
                 value = getattr(current, field.name)
-            elif hasattr(type(dto), field.name):
+            elif field.has_default:
                 value = getattr(type(dto), field.name)
             else:
                 continue
             values[field.name] = value
-        arguments = {key: value for key, value in values.items() if key in mapping.parameters}
-        model = mapping.model(**arguments) if mapping.factory is None else mapping.factory(arguments, current)
-        for name, value in values.items():
-            if name not in mapping.parameters:
-                writer = mapping.writers.get(name)
-                if writer is not None:
-                    writer(model, value)
-                else:
-                    setattr(model, name, value)
+        model = current.updated_copy(values) if updating_entity else mapping.model.from_fields(values)
         if isinstance(model, entity_model):
             model.validate_state()
         return model
