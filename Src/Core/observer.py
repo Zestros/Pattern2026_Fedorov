@@ -1,20 +1,25 @@
 from Src.Core.abstract_observation import abstract_observation
+from Src.Dtos.operation_event_dto import operation_event_dto
 
 
 class observer:
-    __handlers: list[abstract_observation] = []
+    """Доставляет событие подписчикам этого экземпляра."""
 
-    @classmethod
-    def add(cls, source: abstract_observation) -> None:
-        if source not in cls.__handlers:
-            cls.__handlers.append(source)
+    def __init__(self) -> None:
+        """Создаёт пустой список подписчиков."""
+        self.__subscribers: list[abstract_observation] = []
 
-    @classmethod
-    def delete(cls, source: abstract_observation) -> None:
-        if source in cls.__handlers:
-            cls.__handlers.remove(source)
+    def add(self, subscriber: abstract_observation) -> None:
+        """Регистрирует подписчика, если его ещё нет в списке."""
+        if subscriber not in self.__subscribers:
+            self.__subscribers.append(subscriber)
 
-    @classmethod
-    def notify(cls) -> None:
-        for handler in cls.__handlers.copy():
-            handler.update()
+    def delete(self, subscriber: abstract_observation) -> None:
+        """Удаляет подписчика, если он зарегистрирован."""
+        if subscriber in self.__subscribers:
+            self.__subscribers.remove(subscriber)
+
+    def notify(self, event: operation_event_dto) -> None:
+        """Синхронно передаёт событие подписчикам по снимку списка."""
+        for subscriber in self.__subscribers.copy():
+            subscriber.handler(event)

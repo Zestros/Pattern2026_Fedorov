@@ -7,6 +7,7 @@ from Src.Logics.entity_service import entity_service, entity_not_found_exception
 from Src.Logics.resource_catalog import resource_catalog
 from Src.Logics.dto_serializer import dto_serializer
 from Src.Api.http_report import http_report
+from Src.Core.abstract_dto import abstract_dto
 from Src.Core.abstract_entity_repository import abstract_entity_repository
 from Src.Core.entity_conflict_exception import entity_conflict_exception
 from Src.Core.exception import arguments_exception
@@ -113,8 +114,8 @@ def register_report_routes(api, storage: abstract_entity_repository, factory, se
     @api.route("/api/entities/<entity_type>/search", methods=["POST"])
     def search_entities(entity_type: str):
         """Возвращает отобранные и отсортированные сущности указанного типа."""
-        criteria = serializer.deserialize(read_fields(), filter_dto)
-        return jsonify(serializer.serialize(entities.search(entity_type, criteria)))
+        results = entities.search(entity_type, lambda: serializer.deserialize(read_fields(), filter_dto))
+        return jsonify(serializer.serialize(results))
 
     @api.route("/api/entities/<entity_type>", methods=["GET"])
     def get_entities(entity_type: str):
@@ -124,9 +125,12 @@ def register_report_routes(api, storage: abstract_entity_repository, factory, se
     @api.route("/api/entities/<entity_type>", methods=["POST"])
     def create_entity(entity_type: str):
         """Разбирает внешний контракт и вызывает общий прикладной сценарий."""
-        fields = read_fields()
-        dto = serializer.deserialize(fields, resources.request_type(entity_type, fields))
-        result = entities.create(dto)
+        def read_create_dto() -> abstract_dto:
+            """Выбирает контракт создания по полученным полям."""
+            fields = read_fields()
+            return serializer.deserialize(fields, resources.request_type(entity_type, fields))
+
+        result = entities.create(read_create_dto, resource=entity_type)
         response = jsonify(serializer.serialize(result))
         response.status_code = 201
         response.headers["Location"] = url_for("get_entity", entity_type=entity_type, code=result.unique_code)
@@ -140,9 +144,10 @@ def register_report_routes(api, storage: abstract_entity_repository, factory, se
     @api.route("/api/entities/<entity_type>/<code>", methods=["PATCH"])
     def update_entity(entity_type: str, code: str):
         """Разбирает частичный DTO фактического типа, не меняя вид сущности."""
-        current = entities.get(entity_type, code)
-        dto = serializer.deserialize(read_fields(), type(current), partial=True)
-        return jsonify(serializer.serialize(entities.change(entity_type, code, dto)))
+        result = entities.change(
+            entity_type, code, lambda dto_type: serializer.deserialize(read_fields(), dto_type, partial=True),
+        )
+        return jsonify(serializer.serialize(result))
 
     @api.route("/api/entities/<entity_type>/<code>", methods=["DELETE"])
     def delete_entity(entity_type: str, code: str):

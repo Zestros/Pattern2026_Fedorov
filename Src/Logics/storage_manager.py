@@ -4,10 +4,12 @@ from collections.abc import Iterable, Callable
 from Src.Core.abstract_entity_repository import (
     abstract_entity_repository,
 )
+from Src.Core.abstract_event_source import abstract_event_source
 from Src.Core.abstract_manager import abstract_manager
 from Src.Core.entity_model import entity_model
 from Src.Core.exception import arguments_exception
 from Src.Core.validator import operation_exception, validator
+from Src.Dtos.operation_event_dto import operation_event_dto
 from Src.Logics.initial_catalog import demo_transactions, initial_catalog
 from Src.Models.group_model import group_model
 from Src.Models.item_model import item_model
@@ -21,13 +23,15 @@ from Src.Models.warehouse_model import warehouse_model
 from Src.Logics.storage_repository import storage_repository
 
 
-class storage_manager(abstract_manager, abstract_entity_repository):
+class storage_manager(abstract_manager, abstract_entity_repository, abstract_event_source):
     """Фасад загрузки каталога; операции хранения делегирует репозиторию."""
 
     __instance = None
     __initialization_lock = RLock()
 
-    def __new__(cls, settings: settings_model):
+    def __new__(
+        cls, settings: settings_model, *, publish_event: Callable[[operation_event_dto], None] | None = None,
+    ):
         """Создаёт общий экземпляр менеджера."""
         with cls.__initialization_lock:
             if cls.__instance is None:
@@ -35,18 +39,27 @@ class storage_manager(abstract_manager, abstract_entity_repository):
                 cls.__instance.__initialized = False
             return cls.__instance
 
-    def __init__(self, settings: settings_model) -> None:
+    def __init__(
+        self, settings: settings_model, *, publish_event: Callable[[operation_event_dto], None] | None = None,
+    ) -> None:
         """Подготавливает хранилище один раз при первом создании."""
         with self.__initialization_lock:
-            if self.__initialized:
-                return
+            if not self.__initialized:
+                validator.validate(settings, settings_model, field="settings")
+                self.__settings = settings
+                self.__repository = storage_repository()
+                self._is_loaded = False
 
-            validator.validate(settings, settings_model, field="settings")
-            self.__settings = settings
-            self.__repository = storage_repository()
-            self._is_loaded = False
-            self.convert()
-            self.__initialized = True
+            if publish_event is not None:
+                self.set_event_publisher(publish_event)
+
+            if not self.__initialized:
+                self.convert()
+                self.__initialized = True
+
+    def set_event_publisher(self, publish_event: Callable[[operation_event_dto], None]) -> None:
+        """Передаёт издателя в репозиторий, где регистрируются движения."""
+        self.__repository.set_event_publisher(publish_event)
 
     @classmethod
     def initialize_empty(cls, instance: "storage_manager") -> None:
