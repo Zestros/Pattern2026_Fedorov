@@ -1,21 +1,32 @@
 from threading import RLock
 from collections.abc import Iterable, Callable
 from Src.Core.abstract_entity_repository import abstract_entity_repository, validate_entity_type
+from Src.Core.abstract_event_source import abstract_event_source
 from Src.Core.entity_model import entity_model
 from Src.Core.entity_conflict_exception import entity_conflict_exception
+from Src.Core.event_phase import event_phase
 from Src.Core.exception import arguments_exception
+from Src.Core.log_subsystem import log_subsystem
 from Src.Core.validator import validator
+from Src.Dtos.operation_event_dto import operation_event_dto
 from Src.Logics.reference_graph import reference_graph
 from Src.Logics.entity_state import entity_state
+from Src.Models.transaction_model import transaction_model
 
 
-class storage_repository(abstract_entity_repository):
+class storage_repository(abstract_entity_repository, abstract_event_source):
     """Хранит объекты по коду и атомарно регистрирует граф их зависимостей."""
     def __init__(self) -> None:
         """Создаёт независимый каталог, граф ссылок и общую блокировку операций."""
         self.__models = {}
         self.__graph = reference_graph()
         self.__lock = RLock()
+        self.__publish_event: Callable[[operation_event_dto], None] | None = None
+
+    def set_event_publisher(self, publish_event: Callable[[operation_event_dto], None]) -> None:
+        """Подключает публикацию событий о регистрации складских движений."""
+        with self.__lock:
+            self.__publish_event = publish_event
 
     def list(self, entity_type: type[entity_model]) -> tuple[entity_model, ...]:
         """Возвращает снимок состава коллекции в порядке регистрации."""
@@ -120,6 +131,26 @@ class storage_repository(abstract_entity_repository):
                 outgoing[code] = self.__graph.validate_targets(self.__models, pending, value)
                 value.validate_state()
             self.__publish(pending, outgoing)
+
+            publish_event = self.__publish_event
+            if publish_event is None:
+                return
+            events = [
+                operation_event_dto(
+                    subsystem=log_subsystem.STORAGE, operation="movement_recorded", phase=event_phase.COMPLETED,
+                    entity_type="transaction", entity_code=movement.unique_code,
+                    details={
+                        "warehouse_code": movement.warehouse.unique_code,
+                        "item_code": movement.item.unique_code,
+                        "unit_code": movement.unit.unique_code,
+                        "quantity": movement.quantity,
+                    },
+                )
+                for movement in pending.values()
+                if isinstance(movement, transaction_model)
+            ]
+        for event in events:
+            publish_event(event)
 
     def __collect_dependencies(self, pending: dict, original: entity_model | None = None) -> None:
         """Обходит каждый новый объект один раз, переиспользуя сохранённые зависимости."""
