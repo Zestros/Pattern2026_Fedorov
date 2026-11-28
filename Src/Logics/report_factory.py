@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 from Src.Models.settings_model import settings_model
 from Src.Logics.csv_report import csv_report
 from Src.Logics.markdown_report import markdown_report
@@ -14,10 +16,12 @@ from Src.Logics.text_report import text_report
 class report_factory(abstract_report_factory):
     """Создаёт отчёт указанного типа."""
 
-    def __init__(self, settings: settings_model) -> None:
-        """Регистрирует поддерживаемые классы отчётов."""
+    def __init__(
+        self, settings: settings_model, *, get_settings: Callable[[], settings_model] | None = None,
+    ) -> None:
+        """Подключает настройки и регистрирует поддерживаемые классы отчётов."""
         validator.validate(settings, settings_model, field="settings")
-        self.__settings = settings
+        self.__get_settings = get_settings if get_settings is not None else (lambda: settings)
         self.__mapping: dict[
             report_type_enum, type[abstract_report]
         ] = {
@@ -50,5 +54,5 @@ class report_factory(abstract_report_factory):
         return tuple(self.__mapping)
 
     def create_default(self) -> abstract_report:
-        """Создаёт построитель по текущему значению сохранённых настроек."""
-        return self.create(self.__settings.response_format)
+        """Создаёт построитель по актуальному формату из настроек."""
+        return self.create(self.__get_settings().response_format)

@@ -41,7 +41,7 @@ def create_app(*, log_stream: TextIO | None = None, log_path: Path | None = None
     settings.load(str(project_dir / "settings.json"))
 
     storage = storage_manager(settings.settings, publish_event=publish_event)
-    factory = report_factory(settings.settings)
+    factory = report_factory(settings.settings, get_settings=lambda: settings.settings)
 
     repository = storage.get_repository()
     service = report_service(repository, report_source_factory(), factory)

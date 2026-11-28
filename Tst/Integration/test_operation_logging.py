@@ -230,7 +230,7 @@ def test_logged_rejection_teardown_request_for_unknown_route(observed_app):
 
 
 def test_logged_settings_load_detects_only_applied_changes(observed_app, tmp_path):
-    """<summary>Журнал различает первую загрузку и изменение; повторная загрузка и неверные данные записей не добавляют.</summary>"""
+    """<summary>Загрузка нового формата даёт одно событие изменения и сразу обновляет формат отчёта.</summary>"""
     # Подготовка
     app, stream = observed_app
     settings = setting_manager()
@@ -239,6 +239,8 @@ def test_logged_settings_load_detects_only_applied_changes(observed_app, tmp_pat
     target = report_type_enum.TXT if settings.settings.response_format is report_type_enum.CSV else report_type_enum.CSV
     changed_path = tmp_path / "settings.json"
     changed_path.write_text(json.dumps(values | {"response_format": target.name}), encoding="utf-8")
+    unit = app.extensions["report_storage"].units[0]
+    report_url = f"/api/reports/unit/{unit.unique_code}/default"
 
     # Действие
     settings.load(str(initial_path))
@@ -247,6 +249,7 @@ def test_logged_settings_load_detects_only_applied_changes(observed_app, tmp_pat
     changed_path.write_text(json.dumps(values | {"response_format": "unknown"}), encoding="utf-8")
     with pytest.raises(operation_exception):
         settings.load(str(changed_path))
+    response = app.test_client().get(report_url)
 
     # Проверка
     records = [json.loads(line) for line in stream.getvalue().splitlines()]
@@ -256,6 +259,8 @@ def test_logged_settings_load_detects_only_applied_changes(observed_app, tmp_pat
     assert changed["operation"] == "change"
     assert changed["details"] == {"changed_fields": ["response_format"]}
     assert settings.settings.response_format is target
+    assert response.status_code == 200
+    assert response.mimetype == ("text/csv" if target is report_type_enum.CSV else "text/plain")
 
 
 def test_registered_movement_add_despite_unavailable_log_stream(observed_app, capsys):
